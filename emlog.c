@@ -27,7 +27,7 @@
 #include <linux/modversions.h>
 #endif
 
-#include <linux/config.h>
+#include <linux/autoconf.h>
 #include <linux/stddef.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
@@ -218,7 +218,7 @@ static int emlog_release(struct inode *inode, struct file *file)
  * caller must free.  length is (a pointer to) the number of bytes to
  * be read, which will be set by this function to be the number of
  * bytes actually returned */
-caddr_t read_from_emlog(struct emlog_info *einfo, int *length, loff_t *offset)
+caddr_t read_from_emlog(struct emlog_info *einfo, size_t *length, loff_t *offset)
 {
   caddr_t retval;
   int bytes_copied = 0, n, start_point, remaining;
