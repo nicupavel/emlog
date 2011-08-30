@@ -43,6 +43,7 @@
 #include <linux/poll.h>
 
 #include <asm/uaccess.h>
+#include <linux/miscdevice.h>
 
 
 #include "emlog.h"
@@ -399,19 +400,40 @@ static struct file_operations emlog_fops = {
 	.open		= emlog_open,
 	.release	= emlog_release,
 	.poll		= emlog_poll,
+    .llseek         = no_llseek,       /* no_llseek by default introduced at v2.6.37-rc1 */
+    .owner          = THIS_MODULE,
 };
 
+static struct miscdevice emlog_misc = {
+    .minor          = MISC_DYNAMIC_MINOR,
+    .name           = DEVICE_NAME,
+    .fops           = &emlog_fops,
+};
 
 int init_module(void)
 {
-  if (register_chrdev(EMLOG_MAJOR_NUMBER, "emlog", &emlog_fops) < 0) {
-    printk("emlog: unable to register character device %d\n",
-           EMLOG_MAJOR_NUMBER);
-    return -EIO;
-  } else {
-    printk("emlog: version %s running, using major number %d\n", EMLOG_VERSION,
-	   EMLOG_MAJOR_NUMBER);
-  }
+    int ret_val;
+
+    /*
+     * Register the character device (atleast try)
+     * Dynamically recive major number for device.
+     */
+    printk("Register character device /dev/%s.\n", DEVICE_NAME);
+
+    ret_val = misc_register(&emlog_misc);
+
+    /*
+     * Negative values signify an error
+     */
+    if (ret_val < 0) {
+        printk(KERN_ALERT "Registering the character device failed with %d.\n", ret_val);
+
+        return ret_val;
+    }
+
+    printk("For minor number see /proc/misc.\n");
+
+    printk("emlog: version %s running.\n", EMLOG_VERSION);
 
   return 0;
 }
@@ -419,7 +441,12 @@ int init_module(void)
 
 void cleanup_module(void)
 {
-  unregister_chrdev(EMLOG_MAJOR_NUMBER, "emlog");
+  int error;
+
+  error = misc_deregister(&emlog_misc);
+  if (error) {
+        printk(KERN_INFO "misc_deregister() failed with %d error.\n", error);
+  }
 
   /* clean up any still-allocated memory */
   while (emlog_info_list != NULL)

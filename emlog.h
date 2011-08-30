@@ -16,10 +16,10 @@
  * $Id: emlog.h,v 1.6 2001/08/13 21:29:20 jelson Exp $
  */
 
-#define EMLOG_MAJOR_NUMBER   241
 #define EMLOG_MAX_SIZE       128 /* max size in kilobytes of a buffer */
+#define DEVICE_NAME "emlog"
 
-#define EMLOG_VERSION        "0.50"
+#define EMLOG_VERSION        "0.51"
 
 /************************ Private Definitions *****************************/
 
