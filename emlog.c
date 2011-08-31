@@ -5,15 +5,9 @@
  * USC/Information Sciences Institute
  * 
  * Modified By:
- * Nicu Pavel <npavel@ituner.com>
- * (14-08-2006)
- * - replaced MODULE_PARM macro with module_param function
- * (12-06-2006)
- * - 2.6 kernel functions update from Darien version.
- * - 2.6 Kernel Makefile
- *
+ * Andriy Stepanov <stanv at altlinux.ru>
+ * Nicu Pavel <npavel at mini-box.com>
  * Darien Kindlund <kindlund at mitre.org>
- * - Modified the emlog code to make it compatible with Linux 2.6 kernels.
  *
  * This code is released under the GPL
  *

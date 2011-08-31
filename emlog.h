@@ -5,9 +5,10 @@
  * USC/Information Sciences Institute
  *
  * Modified By:
+ * Andriy Stepanov <stanv at altlinux.ru>
+ * Nicu Pavel <npavel at mini-box.com>
  * Darien Kindlund <kindlund at mitre.org>
- * - Modified the emlog code to make it compatible with Linux 2.6 kernels.
- *
+
  * This code is released under the GPL
  *
  * This is emlog version 0.41, released 13 August 2001, modified 21 February 2005
