@@ -1,0 +1,10 @@
+(14-08-2006) Nicu Pavel <npavel@ituner.com>
+  - replaced MODULE_PARM macro with module_param function
+
+(12-06-2006)  Nicu Pavel <npavel@ituner.com>
+  - 2.6 kernel functions update from Darien version.
+  - 2.6 Kernel Makefile
+
+Darien Kindlund <kindlund at mitre.org>
+  - Modified the emlog code to make it compatible with Linux 2.6 kernels.
+  

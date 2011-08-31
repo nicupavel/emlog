@@ -3,10 +3,21 @@
  *
  * Jeremy Elson <jelson@circlemud.org>
  * USC/Information Sciences Institute
+ * 
+ * Modified By:
+ * Nicu Pavel <npavel@ituner.com>
+ * (14-08-2006)
+ * - replaced MODULE_PARM macro with module_param function
+ * (12-06-2006)
+ * - 2.6 kernel functions update from Darien version.
+ * - 2.6 Kernel Makefile
+ *
+ * Darien Kindlund <kindlund at mitre.org>
+ * - Modified the emlog code to make it compatible with Linux 2.6 kernels.
  *
  * This code is released under the GPL
  *
- * This is emlog version 0.40, released 13 August 2001
+ * This is emlog version 0.41, released 13 August 2001, modified 25 July 2006
  * For more information see http://www.circlemud.org/~jelson/software/emlog
  *
  * $Id: emlog.c,v 1.7 2001/08/13 21:29:20 jelson Exp $
@@ -18,16 +29,14 @@
 
 #include <linux/config.h>
 #include <linux/stddef.h>
-#include <linux/tqueue.h>
-#include <linux/sched.h>
 #include <linux/kernel.h>
-#ifdef MODULE
 #include <linux/module.h>
-#endif
-#include <linux/timer.h>
+#include <linux/sched.h>
+#include <linux/workqueue.h>
+#include <linux/wait.h>
 #include <linux/delay.h>
 #include <linux/errno.h>
-#include <linux/malloc.h>
+#include <linux/slab.h>
 #include <linux/vmalloc.h>
 #include <linux/types.h>
 #include <linux/fs.h>
@@ -38,10 +47,12 @@
 
 #include "emlog.h"
 
-MODULE_PARM(emlog_debug, "i");
 
 struct emlog_info *emlog_info_list = NULL;
 static int emlog_debug;
+
+module_param(emlog_debug, int, 0644);
+MODULE_LICENSE("GPL v2");
 
 #define MIN(x, y) ((x) < (y) ? (x) : y)
 
@@ -56,7 +67,7 @@ static struct emlog_info *get_einfo(struct inode *inode)
     return NULL;
 
   for (einfo = emlog_info_list; einfo != NULL; einfo = einfo->next)
-    if (einfo->i_ino == inode->i_ino && einfo->i_dev == inode->i_dev)
+    if (einfo->i_ino == inode->i_ino && einfo->i_rdev == inode->i_rdev)
       return einfo;
 
   return NULL;
@@ -81,13 +92,9 @@ static int create_einfo(struct inode *inode, int minor,
 
   memset(einfo, 0, sizeof(struct emlog_info));
   einfo->i_ino = inode->i_ino;
-  einfo->i_dev = inode->i_dev;
+  einfo->i_rdev = inode->i_rdev;
 
-#if defined(DECLARE_WAIT_QUEUE_HEAD)
   init_waitqueue_head(EMLOG_READQ(einfo));
-#else
-  init_waitqueue(EMLOG_READQ(einfo));
-#endif
 
   /* figure out how much of a buffer this should be and allocate the buffer */
   einfo->size = 1024 * minor;
@@ -175,7 +182,7 @@ static int emlog_open(struct inode *inode, struct file *file)
   }
 
   einfo->refcount++;
-  MOD_INC_USE_COUNT;
+  try_module_get(THIS_MODULE);
   return 0;
 }
 
@@ -201,7 +208,7 @@ static int emlog_release(struct inode *inode, struct file *file)
     free_einfo(einfo);
 
  out:
-  MOD_DEC_USE_COUNT;
+  module_put(THIS_MODULE);
   return retval;
 }
 
@@ -267,16 +274,14 @@ static ssize_t emlog_read(struct file *file,
   }
 
   /* wait until there's data available (unless we do nonblocking reads) */
-  while (*offset >= EMLOG_FIRST_EMPTY_BYTE(einfo)) {
-    if (file->f_flags & O_NONBLOCK)
-      return -EAGAIN;
-
-    interruptible_sleep_on(EMLOG_READQ(einfo));
-
-    /* see if a signal woke us up */
-    if (signal_pending(current))
-      return -ERESTARTSYS;
-  }
+  if (file->f_flags & O_NONBLOCK && *offset >= EMLOG_FIRST_EMPTY_BYTE(einfo))
+    return -EAGAIN;
+      
+  wait_event_interruptible((einfo)->read_q, *offset < (einfo)->offset + EMLOG_QLEN(einfo));
+    
+  /* see if a signal woke us up */
+  if (signal_pending(current))
+    return -ERESTARTSYS;
 
   if ((data_to_return = read_from_emlog(einfo, &length, offset)) == NULL)
     return 0;
@@ -389,11 +394,11 @@ static unsigned int emlog_poll(struct file *file, poll_table *wait)
 
 
 static struct file_operations emlog_fops = {
-  read   : emlog_read,
-  write  : emlog_write,
-  open   : emlog_open,
-  release: emlog_release,
-  poll   : emlog_poll,
+	.read		= emlog_read,
+	.write		= emlog_write,
+	.open		= emlog_open,
+	.release	= emlog_release,
+	.poll		= emlog_poll,
 };
 
 

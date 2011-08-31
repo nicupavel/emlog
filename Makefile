@@ -1,17 +1,26 @@
-KERNEL_HOME := /usr/src/linux
-CFLAGS := -O2 -Wall
+# By default, the build is done against the running kernel version.
+# to build against a different kernel version, set KVER
+#
+#  make KVER=2.6.11-alpha
+#
+#  Alternatively, set KDIR
+#
+#  make KDIR=/usr/src/linux
 
-DEFAULT_TARGETS := emlog.o nbcat
+KVER ?= $(shell uname -r)
+KDIR ?= /lib/modules/$(KVER)/build
+MDIR := emlog
 
-########
+obj-m += emlog.o
 
-default: $(DEFAULT_TARGETS)
+all:: emlog.h
 
-emlog.o: emlog.c emlog.h
-	gcc $(CFLAGS) -c -I$(KERNEL_HOME)/include -D__KERNEL__ -DMODULE emlog.c
+all::
+	$(MAKE) -C $(KDIR) M=$(CURDIR) modules
 
-nbcat: nbcat.c
-	gcc $(CFLAGS) -o nbcat nbcat.c
+install:: all
+	$(MAKE) INSTALL_MOD_PATH=$(DESTDIR) INSTALL_MOD_DIR=$(MDIR) \
+		-C $(KDIR) M=$(CURDIR) modules_install
 
-clean:
-	rm -f $(DEFAULT_TARGETS)
+clean::
+	$(MAKE) -C $(KDIR) M=$(CURDIR) clean
