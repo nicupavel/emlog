@@ -31,6 +31,7 @@
 #include <linux/stddef.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
+#include <linux/cdev.h>
 #include <linux/sched.h>
 #include <linux/workqueue.h>
 #include <linux/wait.h>
@@ -50,7 +51,10 @@
 struct emlog_info *emlog_info_list = NULL;
 static int emlog_debug;
 
-static struct cdev *emlog_cdev;
+static struct cdev emlog_cdev;
+static dev_t emlog_dev;
+#define EMLOG_MINOR_BASE    0
+#define EMLOG_MINOR_COUNT   256
 
 module_param(emlog_debug, int, 0644);
 
@@ -395,56 +399,40 @@ static struct file_operations emlog_fops = {
     .owner = THIS_MODULE,
 };
 
-static struct miscdevice emlog_misc = {
-    .minor = MISC_DYNAMIC_MINOR,
-    .name = DEVICE_NAME,
-    .fops = &emlog_fops,
-};
-
 int init_module(void)
 {
-    struct cdev *cdev_alloc(void);
-    1 G int ret_val;
+    int ret_val;
 
-    /*
-     * Register the character device (atleast try)
-     * Dynamically recive major number for device.
-     */
-    printk("Register character device /dev/%s.\n", DEVICE_NAME);
-
-    ret_val = misc_register(&emlog_misc);
-
-    /*
-     * Negative values signify an error
-     */
-    if (ret_val < 0) {
-        printk(KERN_ALERT
-               "Registering the character device failed with %d.\n",
-               ret_val);
-
-        return ret_val;
+    ret_val = alloc_chrdev_region(&emlog_dev, EMLOG_MINOR_BASE, EMLOG_MINOR_COUNT, DEVICE_NAME);
+    if(ret_val < 0) {
+        printk(KERN_ERR "%s: Can not alloc_chrdev_region, error code %d.\n", DEVICE_NAME, ret_val);
+        return -1;
     }
 
-    printk("For minor number see /proc/misc.\n");
+    cdev_init(&emlog_cdev, &emlog_fops);
+    emlog_cdev.owner = THIS_MODULE;
 
-    printk("emlog: version %s running.\n", EMLOG_VERSION);
+    ret_val = cdev_add(&emlog_cdev, emlog_dev, EMLOG_MINOR_COUNT);
+    if(ret_val < 0) {
+        printk(KERN_ERR "%s: Can not cdev_add, error code %d.\n", DEVICE_NAME, ret_val);
+        unregister_chrdev_region(emlog_dev, EMLOG_MINOR_COUNT);
+        return -2;
+    }
+
+    printk(KERN_INFO "%s: version %s running, major is %d.\n", DEVICE_NAME, EMLOG_VERSION, MAJOR(emlog_dev));
 
     return 0;
+
 }
 
 void cleanup_module(void)
 {
-    int error;
-
-    error = misc_deregister(&emlog_misc);
-    if (error) {
-        printk(KERN_INFO "misc_deregister() failed with %d error.\n",
-               error);
-    }
-
     /* clean up any still-allocated memory */
     while (emlog_info_list != NULL)
         free_einfo(emlog_info_list);
 
-    printk("emlog: unloading\n");
+    unregister_chrdev_region(emlog_dev, EMLOG_MINOR_COUNT);
+    cdev_del(&emlog_cdev);
+
+    printk(KERN_INFO "%s: unloaded.\n", DEVICE_NAME);
 }
