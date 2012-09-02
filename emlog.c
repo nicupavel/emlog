@@ -32,6 +32,7 @@
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/cdev.h>
+#include <linux/device.h>
 #include <linux/sched.h>
 #include <linux/workqueue.h>
 #include <linux/wait.h>
@@ -51,14 +52,14 @@
 struct emlog_info *emlog_info_list = NULL;
 static int emlog_debug;
 
-static struct cdev emlog_cdev;
-static dev_t emlog_dev;
+static dev_t emlog_dev_type = 0;
 #define EMLOG_MINOR_BASE    0
 #define EMLOG_MINOR_COUNT   256
+static struct cdev *emlog_cdev = 0;
+static struct class *emlog_class = 0;
+static struct device *emlog_dev_reg;
 
 module_param(emlog_debug, int, 0644);
-
-MODULE_LICENSE("GPL v2");
 
 #define MIN(x, y) ((x) < (y) ? (x) : y)
 
@@ -396,40 +397,71 @@ static struct file_operations emlog_fops = {
     .owner = THIS_MODULE,
 };
 
-int init_module(void)
+static int __init emlog_init(void)
 {
     int ret_val;
 
-    ret_val = alloc_chrdev_region(&emlog_dev, EMLOG_MINOR_BASE, EMLOG_MINOR_COUNT, DEVICE_NAME);
+    ret_val = alloc_chrdev_region(&emlog_dev_type, EMLOG_MINOR_BASE, EMLOG_MINOR_COUNT, DEVICE_NAME);
     if(ret_val < 0) {
         printk(KERN_ERR "%s: Can not alloc_chrdev_region, error code %d.\n", DEVICE_NAME, ret_val);
         return -1;
     }
 
-    cdev_init(&emlog_cdev, &emlog_fops);
-    emlog_cdev.owner = THIS_MODULE;
-
-    ret_val = cdev_add(&emlog_cdev, emlog_dev, EMLOG_MINOR_COUNT);
-    if(ret_val < 0) {
-        printk(KERN_ERR "%s: Can not cdev_add, error code %d.\n", DEVICE_NAME, ret_val);
-        unregister_chrdev_region(emlog_dev, EMLOG_MINOR_COUNT);
-        return -2;
+    emlog_cdev = cdev_alloc();
+    if (emlog_cdev == NULL) {
+        printk(KERN_ERR "%s: Can not cdev_alloc.\n", DEVICE_NAME);
+        ret_val = -2; goto emlog_init_error;
     }
 
-    printk(KERN_INFO "%s: version %s running, major is %d.\n", DEVICE_NAME, EMLOG_VERSION, MAJOR(emlog_dev));
+    emlog_cdev->ops = &emlog_fops;
+    emlog_cdev->owner = THIS_MODULE;
 
-    return 0;
+    ret_val = cdev_add(emlog_cdev, emlog_dev_type, EMLOG_MINOR_COUNT);
+    if(ret_val < 0) {
+        printk(KERN_ERR "%s: Can not cdev_add, error code %d.\n", DEVICE_NAME, ret_val);
+        ret_val = -3; goto emlog_init_error;
+    }
 
+    printk(KERN_INFO "%s: version %s running, major is %d, MINOR is %d.\n", DEVICE_NAME, EMLOG_VERSION, MAJOR(emlog_dev_type), MINOR(emlog_dev_type));
+
+    emlog_class = class_create(THIS_MODULE, DEVICE_NAME);
+    if (emlog_class == NULL) {
+        printk(KERN_ERR "%s: Can not class_create.\n", DEVICE_NAME);
+        ret_val = -4; goto emlog_init_error;
+    }
+
+    emlog_dev_reg = device_create(emlog_class, NULL, emlog_dev_type, NULL, DEVICE_NAME);
+    if (emlog_dev_reg == NULL) {
+        printk(KERN_ERR "%s: Can not device_create.\n", DEVICE_NAME);
+        ret_val = -5; goto emlog_init_error;
+    }
+
+    goto emlog_init_okay;
+  emlog_init_error:
+    if (emlog_dev_reg) device_destroy(emlog_class, emlog_dev_type);
+    if (emlog_class) class_destroy(emlog_class);
+    if (emlog_cdev) cdev_del(emlog_cdev);
+    if (emlog_dev_type) unregister_chrdev_region(emlog_dev_type, EMLOG_MINOR_COUNT);
+  emlog_init_okay:
+    return ret_val;
 }
 
-void cleanup_module(void)
+static void __exit emlog_remove(void)
 {
     /* clean up any still-allocated memory */
     while (emlog_info_list != NULL)
         free_einfo(emlog_info_list);
 
-    unregister_chrdev_region(emlog_dev, EMLOG_MINOR_COUNT);
-    cdev_del(&emlog_cdev);
+    device_destroy(emlog_class, emlog_dev_type);
+    class_destroy(emlog_class);
+    cdev_del(emlog_cdev);
+    unregister_chrdev_region(emlog_dev_type, EMLOG_MINOR_COUNT);
 
     printk(KERN_INFO "%s: unloaded.\n", DEVICE_NAME);
 }
+
+module_init(emlog_init);
+module_exit(emlog_remove);
+
+MODULE_LICENSE("GPL v2");
+
