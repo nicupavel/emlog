@@ -1,9 +1,11 @@
 #!/bin/bash
 echo ---- making emlog and nbcat
-make emlog.ko
+make
 make nbcat
 echo ---- inserting module
 insmod emlog.ko
+cat /proc/devices | grep emlog
+ls -la -tr /sys/class/emlog
 echo ---- testing module
 mknod testlog c 250 8
 echo "testing testlog."$RANDOM > testlog
