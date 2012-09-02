@@ -8,3 +8,4 @@
 .tmp_versions/*
 *.mod.*
 modules.order
+nbcat
