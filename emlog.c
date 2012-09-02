@@ -135,7 +135,7 @@ void free_einfo(struct emlog_info *einfo)
     struct emlog_info **ptr;
 
     if (einfo == NULL) {
-        printk(KERN_ERROR "%s: null passed to free_einfo.\n", DEVICE_NAME);
+        printk(KERN_ERR "%s: null passed to free_einfo.\n", DEVICE_NAME);
         return;
     }
 
@@ -150,7 +150,7 @@ void free_einfo(struct emlog_info *einfo)
     ptr = &emlog_info_list;
     while (*ptr != einfo) {
         if (!*ptr) {
-            printk(KERN_ERROR "%s: corrupt einfo list.\n", DEVICE_NAME);
+            printk(KERN_ERR "%s: corrupt einfo list.\n", DEVICE_NAME);
             break;
         } else
             ptr = &((**ptr).next);
@@ -176,7 +176,7 @@ static int emlog_open(struct inode *inode, struct file *file)
     }
 
     if (einfo == NULL) {
-        printk(KERN_ERROR "%s: can not fetch einfo for inode %ld, in emlog_open.\n", DEVICE_NAME, inode);
+        printk(KERN_ERR "%s: can not fetch einfo for inode %ld, in emlog_open.\n", DEVICE_NAME, inode->i_ino);
         return -EIO;
     }
 
@@ -193,8 +193,8 @@ static int emlog_release(struct inode *inode, struct file *file)
 
     /* get the buffer info */
     if ((einfo = get_einfo(inode)) == NULL) {
-        printk(KERN_ERROR "%s: can not fetch einfo for inode %ld, in emlog_release.\n", DEVICE_NAME, inode);
-        return -EIO;
+        printk(KERN_ERR "%s: can not fetch einfo for inode %ld, in emlog_release.\n", DEVICE_NAME, inode->i_ino);
+        retval = EIO; goto out;
     }
 
     /* decrement the reference count.  if no one has this file open and
@@ -265,7 +265,7 @@ static ssize_t emlog_read(struct file *file, char *buffer,      /* The buffer to
 
     /* get the metadata about this emlog */
     if ((einfo = get_einfo(file->f_dentry->d_inode)) == NULL) {
-        printk(KERN_ERROR "%s: can not fetch einfo for inode %ld, in emlog_release.\n", DEVICE_NAME, file->f_dentry->d_inode);
+        printk(KERN_ERR "%s: can not fetch einfo for inode %ld, in emlog_release.\n", DEVICE_NAME, (long)(file->f_dentry->d_inode->i_ino));
         return -EIO;
     }
 
