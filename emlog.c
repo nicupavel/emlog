@@ -111,8 +111,7 @@ static int create_einfo(struct inode *inode, int minor,
     emlog_info_list = einfo;
 
     if (emlog_debug)
-        printk("allocating resources associated with inode %ld\n",
-               einfo->i_ino);
+        printk(KERN_DEBUG "%s: allocating resources associated with inode %ld.\n", DEVICE_NAME, einfo->i_ino);
 
     /* pass the struct back */
     *peinfo = einfo;
@@ -136,13 +135,12 @@ void free_einfo(struct emlog_info *einfo)
     struct emlog_info **ptr;
 
     if (einfo == NULL) {
-        printk("null passed to free_einfo... which is bad\n");
+        printk(KERN_ERROR "%s: null passed to free_einfo.\n", DEVICE_NAME);
         return;
     }
 
     if (emlog_debug)
-        printk("freeing resources associated with inode %ld\n",
-               einfo->i_ino);
+        printk(KERN_DEBUG "%s: freeing resources associated with inode %ld.\n", DEVICE_NAME, einfo->i_ino);
 
     vfree(einfo->data);
 
@@ -152,7 +150,7 @@ void free_einfo(struct emlog_info *einfo)
     ptr = &emlog_info_list;
     while (*ptr != einfo) {
         if (!*ptr) {
-            printk("corrupt einfo list!\n");
+            printk(KERN_ERROR "%s: corrupt einfo list.\n", DEVICE_NAME);
             break;
         } else
             ptr = &((**ptr).next);
@@ -178,7 +176,7 @@ static int emlog_open(struct inode *inode, struct file *file)
     }
 
     if (einfo == NULL) {
-        printk("BUG IN EMLOG!\n");
+        printk(KERN_ERROR "%s: can not fetch einfo for inode %ld, in emlog_open.\n", DEVICE_NAME, inode);
         return -EIO;
     }
 
@@ -195,9 +193,8 @@ static int emlog_release(struct inode *inode, struct file *file)
 
     /* get the buffer info */
     if ((einfo = get_einfo(inode)) == NULL) {
-        printk("emlog: releasing unknown file!  zoinks!\n");
-        return -EINVAL;
-        goto out;
+        printk(KERN_ERROR "%s: can not fetch einfo for inode %ld, in emlog_release.\n", DEVICE_NAME, inode);
+        return -EIO;
     }
 
     /* decrement the reference count.  if no one has this file open and
@@ -268,7 +265,7 @@ static ssize_t emlog_read(struct file *file, char *buffer,      /* The buffer to
 
     /* get the metadata about this emlog */
     if ((einfo = get_einfo(file->f_dentry->d_inode)) == NULL) {
-        printk("emlog_read: record not found\n");
+        printk(KERN_ERROR "%s: can not fetch einfo for inode %ld, in emlog_release.\n", DEVICE_NAME, file->f_dentry->d_inode);
         return -EIO;
     }
 
