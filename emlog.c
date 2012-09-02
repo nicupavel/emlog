@@ -21,7 +21,12 @@
 #include <linux/modversions.h>
 #endif
 
+#include <linux/version.h>
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 33)
 #include <linux/autoconf.h>
+#else
+#include <generated/autoconf.h>
+#endif
 #include <linux/stddef.h>
 #include <linux/kernel.h>
 #include <linux/module.h>

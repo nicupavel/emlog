@@ -1,0 +1,10 @@
+*.orig
+*~
+.~
+.*\.sw?
+*.ko
+*.o
+.*\.cmd
+.tmp_versions/*
+*.mod.*
+modules.order
