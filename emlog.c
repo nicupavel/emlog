@@ -6,6 +6,7 @@
  * USC/Information Sciences Institute
  * 
  * Modified By:
+ * Andreas Neustifter <andreas.neustifter at gmail.com>
  * Andriy Stepanov <stanv at altlinux.ru>
  * Nicu Pavel <npavel at mini-box.com>
  * Darien Kindlund <kindlund at mitre.org>

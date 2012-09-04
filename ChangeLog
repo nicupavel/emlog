@@ -1,3 +1,7 @@
+(02-09-2012) Andreas Neustifter <andreas.neustifter at gmail.com>
+  - stability fixes
+  - module init and remove rewritten
+
 (31-08-2011) Andriy Stepanov <stanv at altlinux.ru>
   - fix build on 3.0.3 kernel
   - auto register /dev/emlog by udev
