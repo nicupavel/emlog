@@ -31,7 +31,7 @@ struct emlog_info {
     unsigned long i_ino;        /* Inode number of this emlog buffer */
     dev_t i_rdev;               /* Device number of this emlog buffer */
     char *data;                 /* The circular buffer data */
-    int size;                   /* Size of the buffer pointed to by 'data' */
+    size_t size;                /* Size of the buffer pointed to by 'data' */
     int refcount;               /* Files that have this buffer open */
     int read_point;             /* Offset in circ. buffer of oldest data */
     int write_point;            /* Offset in circ. buffer of newest data */

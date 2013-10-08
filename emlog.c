@@ -62,8 +62,6 @@ static struct device *emlog_dev_reg;
 
 module_param(emlog_debug, int, 0644);
 
-#define MIN(x, y) ((x) < (y) ? (x) : y)
-
 /* find the emlog-info structure associated with an inode.  returns a
  * pointer to the structure if found, NULL if not found */
 static struct emlog_info *get_einfo(struct inode *inode)
@@ -220,7 +218,8 @@ caddr_t read_from_emlog(struct emlog_info * einfo, size_t * length,
                         loff_t * offset)
 {
     caddr_t retval;
-    int bytes_copied = 0, n, start_point, remaining;
+    int bytes_copied = 0, n, start_point;
+    size_t remaining;
 
     /* is the user trying to read data that has already scrolled off? */
     if (*offset < einfo->offset)
@@ -232,7 +231,7 @@ caddr_t read_from_emlog(struct emlog_info * einfo, size_t * length,
 
     /* find the smaller of the total bytes we have available and what
      * the user is asking for */
-    *length = MIN(*length, EMLOG_FIRST_EMPTY_BYTE(einfo) - *offset);
+    *length = min((loff_t)*length, EMLOG_FIRST_EMPTY_BYTE(einfo) - *offset);
     remaining = *length;
 
     /* figure out where to start based on user's offset */
@@ -245,7 +244,7 @@ caddr_t read_from_emlog(struct emlog_info * einfo, size_t * length,
 
     /* copy the (possibly noncontiguous) data to our buffer */
     while (remaining) {
-        n = MIN(remaining, einfo->size - start_point);
+        n = min(remaining, einfo->size - start_point);
         memcpy(retval + bytes_copied, einfo->data + start_point, n);
         bytes_copied += n;
         remaining -= n;
@@ -297,7 +296,7 @@ static ssize_t emlog_read(struct file *file, char *buffer,      /* The buffer to
 
 /* write_to_emlog writes to a circular buffer with wraparound.  in the
  * case of an overflow, it overwrites the oldest unread data. */
-void write_to_emlog(struct emlog_info *einfo, caddr_t buf, int length)
+void write_to_emlog(struct emlog_info *einfo, caddr_t buf, size_t length)
 {
     int bytes_copied = 0;
     int overflow = 0;
@@ -319,7 +318,7 @@ void write_to_emlog(struct emlog_info *einfo, caddr_t buf, int length)
     while (length) {
         /* how many contiguous bytes are available from the write point to
          * the end of the circular buffer? */
-        n = MIN(length, einfo->size - einfo->write_point);
+        n = min(length, einfo->size - einfo->write_point);
         memcpy(einfo->data + einfo->write_point, buf + bytes_copied, n);
         bytes_copied += n;
         length -= n;
@@ -338,7 +337,7 @@ static ssize_t emlog_write(struct file *file,
                            size_t length, loff_t * offset)
 {
     caddr_t message = NULL;
-    int n;
+    size_t n;
     struct emlog_info *einfo;
 
     /* get the metadata about this emlog */
@@ -348,7 +347,7 @@ static ssize_t emlog_write(struct file *file,
     /* if the message is longer than the buffer, just take the beginning
      * of it, in hopes that the reader (if any) will have time to read
      * before we wrap around and obliterate it */
-    n = MIN(length, einfo->size - 1);
+    n = min(length, einfo->size - 1);
 
     /* make sure we have the memory for it */
     if ((message = kmalloc(n, GFP_KERNEL)) == NULL)
