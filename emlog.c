@@ -50,7 +50,7 @@
 
 #include "emlog.h"
 
-struct emlog_info *emlog_info_list = NULL;
+static struct emlog_info *emlog_info_list = NULL;
 static int emlog_debug;
 
 static dev_t emlog_dev_type = 0;
@@ -130,7 +130,7 @@ static int create_einfo(struct inode *inode, int minor,
 /* this frees all data associated with an emlog_info buffer, including
  * the struct that you pass to the function.  don't dereference this
  * structure after calling free_einfo! */
-void free_einfo(struct emlog_info *einfo)
+static void free_einfo(struct emlog_info *einfo)
 {
     struct emlog_info **ptr;
 
@@ -214,7 +214,7 @@ static int emlog_release(struct inode *inode, struct file *file)
  * caller must free.  length is (a pointer to) the number of bytes to
  * be read, which will be set by this function to be the number of
  * bytes actually returned */
-caddr_t read_from_emlog(struct emlog_info * einfo, size_t * length,
+static caddr_t read_from_emlog(struct emlog_info * einfo, size_t * length,
                         loff_t * offset)
 {
     caddr_t retval;
@@ -296,7 +296,7 @@ static ssize_t emlog_read(struct file *file, char *buffer,      /* The buffer to
 
 /* write_to_emlog writes to a circular buffer with wraparound.  in the
  * case of an overflow, it overwrites the oldest unread data. */
-void write_to_emlog(struct emlog_info *einfo, caddr_t buf, size_t length)
+static void write_to_emlog(struct emlog_info *einfo, caddr_t buf, size_t length)
 {
     int bytes_copied = 0;
     int overflow = 0;
