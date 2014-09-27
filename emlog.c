@@ -181,7 +181,11 @@ static int emlog_open(struct inode *inode, struct file *file)
     }
 
     einfo->refcount++;
-    try_module_get(THIS_MODULE);
+    if (!try_module_get(THIS_MODULE)) {
+        dev_err(emlog_dev_reg, "cannot get module\n");
+        einfo->refcount--;
+        return -ENODEV;
+    }
     return 0;
 }
 
@@ -387,7 +391,7 @@ static unsigned int emlog_poll(struct file *file, poll_table * wait)
         return 0;
 }
 
-static struct file_operations emlog_fops = {
+static const struct file_operations emlog_fops = {
     .read = emlog_read,
     .write = emlog_write,
     .open = emlog_open,
