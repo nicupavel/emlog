@@ -33,9 +33,9 @@ struct emlog_info {
     char *data;                 /* The circular buffer data */
     size_t size;                /* Size of the buffer pointed to by 'data' */
     int refcount;               /* Files that have this buffer open */
-    int read_point;             /* Offset in circ. buffer of oldest data */
-    int write_point;            /* Offset in circ. buffer of newest data */
-    int offset;                 /* Byte number of read_point in the stream */
+    size_t read_point;          /* Offset in circ. buffer of oldest data */
+    size_t write_point;         /* Offset in circ. buffer of newest data */
+    loff_t offset;              /* Byte number of read_point in the stream */
     struct emlog_info *next;
 };
 

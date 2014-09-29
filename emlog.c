@@ -231,7 +231,7 @@ static caddr_t read_from_emlog(struct emlog_info * einfo, size_t * length,
 
     /* find the smaller of the total bytes we have available and what
      * the user is asking for */
-    *length = min((loff_t)*length, EMLOG_FIRST_EMPTY_BYTE(einfo) - *offset);
+    *length = min_t(size_t, *length, EMLOG_FIRST_EMPTY_BYTE(einfo) - *offset);
     remaining = *length;
 
     /* figure out where to start based on user's offset */
