@@ -51,20 +51,20 @@
 #include "emlog.h"
 
 static struct emlog_info *emlog_info_list = NULL;
-static int emlog_debug;
+static bool emlog_debug;
 
 static dev_t emlog_dev_type = 0;
 #define EMLOG_MINOR_BASE    0
 #define EMLOG_MINOR_COUNT   256
-static struct cdev *emlog_cdev = 0;
-static struct class *emlog_class = 0;
+static struct cdev *emlog_cdev = NULL;
+static struct class *emlog_class = NULL;
 static struct device *emlog_dev_reg;
 
-module_param(emlog_debug, int, 0644);
+module_param(emlog_debug, bool, 0644);
 
 /* find the emlog-info structure associated with an inode.  returns a
  * pointer to the structure if found, NULL if not found */
-static struct emlog_info *get_einfo(struct inode *inode)
+static struct emlog_info *get_einfo(const struct inode *inode)
 {
     struct emlog_info *einfo;
 
@@ -81,7 +81,7 @@ static struct emlog_info *get_einfo(struct inode *inode)
 /* create a new emlog buffer and its associated info structure.
  * returns an errno on failure, or 0 on success.  on success, the
  * pointer to the new struct is passed back using peinfo */
-static int create_einfo(struct inode *inode, int minor,
+static int create_einfo(const struct inode *inode, int minor,
                         struct emlog_info **peinfo)
 {
     struct emlog_info *einfo;
@@ -91,10 +91,9 @@ static int create_einfo(struct inode *inode, int minor,
         return -EINVAL;
 
     /* allocate space for our metadata and initialize it */
-    if ((einfo = kmalloc(sizeof(struct emlog_info), GFP_KERNEL)) == NULL)
+    if ((einfo = kzalloc(sizeof(struct emlog_info), GFP_KERNEL)) == NULL)
         goto struct_malloc_failed;
 
-    memset(einfo, 0, sizeof(struct emlog_info));
     einfo->i_ino = inode->i_ino;
     einfo->i_rdev = inode->i_rdev;
 
@@ -102,8 +101,7 @@ static int create_einfo(struct inode *inode, int minor,
 
     /* figure out how much of a buffer this should be and allocate the buffer */
     einfo->size = 1024 * minor;
-    if ((einfo->data =
-         (char *) vmalloc(sizeof(char) * einfo->size)) == NULL)
+    if ((einfo->data = vmalloc(sizeof(char) * einfo->size)) == NULL)
         goto data_malloc_failed;
 
     /* add it to our linked list */
@@ -214,14 +212,14 @@ static int emlog_release(struct inode *inode, struct file *file)
 }
 
 /* read_from_emlog reads bytes out of a circular buffer with
- * wraparound.  returns caddr_t, pointer to data read, which the
+ * wraparound.  returns char * pointer to data read, which the
  * caller must free.  length is (a pointer to) the number of bytes to
  * be read, which will be set by this function to be the number of
  * bytes actually returned */
-static caddr_t read_from_emlog(struct emlog_info * einfo, size_t * length,
+static char * read_from_emlog(struct emlog_info * einfo, size_t * length,
                         loff_t * offset)
 {
-    caddr_t retval;
+    char *retval;
     int bytes_copied = 0, n, start_point;
     size_t remaining;
 
@@ -260,12 +258,12 @@ static caddr_t read_from_emlog(struct emlog_info * einfo, size_t * length,
     return retval;
 }
 
-static ssize_t emlog_read(struct file *file, char *buffer,      /* The buffer to fill with data */
+static ssize_t emlog_read(struct file *file, char __user *buffer,      /* The buffer to fill with data */
                           size_t length,        /* The length of the buffer */
                           loff_t * offset)
 {                               /* Our offset in the file */
     int retval;
-    caddr_t data_to_return;
+    char *data_to_return;
     struct emlog_info *einfo;
 
     /* get the metadata about this emlog */
@@ -300,7 +298,7 @@ static ssize_t emlog_read(struct file *file, char *buffer,      /* The buffer to
 
 /* write_to_emlog writes to a circular buffer with wraparound.  in the
  * case of an overflow, it overwrites the oldest unread data. */
-static void write_to_emlog(struct emlog_info *einfo, caddr_t buf, size_t length)
+static void write_to_emlog(struct emlog_info *einfo, char *buf, size_t length)
 {
     int bytes_copied = 0;
     int overflow = 0;
@@ -337,10 +335,10 @@ static void write_to_emlog(struct emlog_info *einfo, caddr_t buf, size_t length)
 }
 
 static ssize_t emlog_write(struct file *file,
-                           const char *buffer,
+                           const char __user *buffer,
                            size_t length, loff_t * offset)
 {
-    caddr_t message = NULL;
+    char *message = NULL;
     size_t n;
     struct emlog_info *einfo;
 
@@ -375,7 +373,7 @@ static ssize_t emlog_write(struct file *file,
     return n;
 }
 
-static unsigned int emlog_poll(struct file *file, poll_table * wait)
+static unsigned int emlog_poll(struct file *file, struct poll_table_struct * wait)
 {
     struct emlog_info *einfo;
 
