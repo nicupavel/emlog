@@ -4,7 +4,7 @@
  *
  * Jeremy Elson <jelson@circlemud.org>
  * USC/Information Sciences Institute
- * 
+ *
  * Modified By:
  * Andreas Neustifter <andreas.neustifter at gmail.com>
  * Andriy Stepanov <stanv at altlinux.ru>
@@ -45,7 +45,11 @@
 #include <linux/fs.h>
 #include <linux/poll.h>
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 18)
 #include <asm/uaccess.h>
+#else
+#include <linux/uaccess.h>
+#endif
 #include <linux/miscdevice.h>
 
 #include "emlog.h"
@@ -404,7 +408,7 @@ static int __init emlog_init(void)
     int ret_val;
 
     ret_val = alloc_chrdev_region(&emlog_dev_type, EMLOG_MINOR_BASE, EMLOG_MINOR_COUNT, DEVICE_NAME);
-    if(ret_val < 0) {
+    if (ret_val < 0) {
         printk(KERN_ERR "%s: Can not alloc_chrdev_region, error code %d.\n", DEVICE_NAME, ret_val);
         return -1;
     }
@@ -419,7 +423,7 @@ static int __init emlog_init(void)
     emlog_cdev->owner = THIS_MODULE;
 
     ret_val = cdev_add(emlog_cdev, emlog_dev_type, EMLOG_MINOR_COUNT);
-    if(ret_val < 0) {
+    if (ret_val < 0) {
         printk(KERN_ERR "%s: Can not cdev_add, error code %d.\n", DEVICE_NAME, ret_val);
         ret_val = -3; goto emlog_init_error;
     }
