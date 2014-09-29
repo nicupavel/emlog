@@ -8,4 +8,5 @@
 .tmp_versions/*
 *.mod.*
 modules.order
+Module.symvers
 nbcat
