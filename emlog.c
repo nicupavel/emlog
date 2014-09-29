@@ -55,7 +55,6 @@
 #else
 #include <linux/uaccess.h>
 #endif
-#include <linux/miscdevice.h>
 
 /* older kernels don't have pr_{info,err,debug}() at all or lacks pr_fmt() expansion */
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 28)
@@ -77,8 +76,8 @@ static struct emlog_info *emlog_info_list = NULL;
 static bool emlog_debug;
 
 static dev_t emlog_dev_type = 0;
-#define EMLOG_MINOR_BASE    0
-#define EMLOG_MINOR_COUNT   256
+#define EMLOG_MINOR_BASE    1
+#define EMLOG_MINOR_COUNT   127 /* keep in sync with EMLOG_MAX_SIZE */
 static struct cdev *emlog_cdev = NULL;
 static struct class *emlog_class = NULL;
 static struct device *emlog_dev_reg;
