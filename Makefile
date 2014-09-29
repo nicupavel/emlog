@@ -11,8 +11,6 @@ KVER ?= $(shell uname -r)
 KDIR ?= /lib/modules/$(KVER)/build
 MDIR := emlog
 
-obj-m += emlog.o
-
 all:: emlog.h
 
 all::
