@@ -19,6 +19,11 @@
  * $Id: emlog.c,v 1.7 2001/08/13 21:29:20 jelson Exp $
  */
 
+/* pr_fmt() taken from infiniband/core/netlink.c */
+#define pr_fmt(fmt) "%s:%s: " fmt, KBUILD_MODNAME, __func__
+/* to have pr_debug() output in case DYNAMIC_DEBUG is disabled */
+#define DEBUG 1
+
 #ifdef MODVERSIONS
 #include <linux/modversions.h>
 #endif
@@ -51,6 +56,20 @@
 #include <linux/uaccess.h>
 #endif
 #include <linux/miscdevice.h>
+
+/* older kernels don't have pr_{info,err,debug}() at all or lacks pr_fmt() expansion */
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 28)
+#undef pr_err
+#undef pr_info
+#undef pr_debug
+/* copied from 3.14 kernel's printk.h */
+#define pr_err(fmt, ...) \
+    printk(KERN_ERR pr_fmt(fmt), ##__VA_ARGS__)
+#define pr_info(fmt, ...) \
+    printk(KERN_INFO pr_fmt(fmt), ##__VA_ARGS__)
+#define pr_debug(fmt, ...) \
+    printk(KERN_DEBUG pr_fmt(fmt), ##__VA_ARGS__)
+#endif
 
 #include "emlog.h"
 
@@ -113,7 +132,7 @@ static int create_einfo(const struct inode *inode, int minor,
     emlog_info_list = einfo;
 
     if (emlog_debug)
-        printk(KERN_DEBUG "%s: allocating resources associated with inode %ld.\n", DEVICE_NAME, einfo->i_ino);
+        pr_debug("allocating resources associated with inode %ld.\n", einfo->i_ino);
 
     /* pass the struct back */
     *peinfo = einfo;
@@ -137,12 +156,12 @@ static void free_einfo(struct emlog_info *einfo)
     struct emlog_info **ptr;
 
     if (einfo == NULL) {
-        printk(KERN_ERR "%s: null passed to free_einfo.\n", DEVICE_NAME);
+        pr_err("null passed to free_einfo.\n");
         return;
     }
 
     if (emlog_debug)
-        printk(KERN_DEBUG "%s: freeing resources associated with inode %ld.\n", DEVICE_NAME, einfo->i_ino);
+        pr_debug("freeing resources associated with inode %ld.\n", einfo->i_ino);
 
     vfree(einfo->data);
 
@@ -152,7 +171,7 @@ static void free_einfo(struct emlog_info *einfo)
     ptr = &emlog_info_list;
     while (*ptr != einfo) {
         if (!*ptr) {
-            printk(KERN_ERR "%s: corrupt einfo list.\n", DEVICE_NAME);
+            pr_err("corrupt einfo list.\n");
             break;
         } else
             ptr = &((**ptr).next);
@@ -178,13 +197,13 @@ static int emlog_open(struct inode *inode, struct file *file)
     }
 
     if (einfo == NULL) {
-        printk(KERN_ERR "%s: can not fetch einfo for inode %ld, in emlog_open.\n", DEVICE_NAME, inode->i_ino);
+        pr_err("can not fetch einfo for inode %ld.\n", inode->i_ino);
         return -EIO;
     }
 
     einfo->refcount++;
     if (!try_module_get(THIS_MODULE)) {
-        dev_err(emlog_dev_reg, "cannot get module\n");
+        pr_err("cannot get module\n");
         einfo->refcount--;
         return -ENODEV;
     }
@@ -199,7 +218,7 @@ static int emlog_release(struct inode *inode, struct file *file)
 
     /* get the buffer info */
     if ((einfo = get_einfo(inode)) == NULL) {
-        printk(KERN_ERR "%s: can not fetch einfo for inode %ld, in emlog_release.\n", DEVICE_NAME, inode->i_ino);
+        pr_err("can not fetch einfo for inode %ld.\n", inode->i_ino);
         retval = EIO; goto out;
     }
 
@@ -272,7 +291,7 @@ static ssize_t emlog_read(struct file *file, char __user *buffer,      /* The bu
 
     /* get the metadata about this emlog */
     if ((einfo = get_einfo(file->f_dentry->d_inode)) == NULL) {
-        printk(KERN_ERR "%s: can not fetch einfo for inode %ld, in emlog_release.\n", DEVICE_NAME, (long)(file->f_dentry->d_inode->i_ino));
+        pr_err("can not fetch einfo for inode %ld.\n", (long)(file->f_dentry->d_inode->i_ino));
         return -EIO;
     }
 
@@ -409,13 +428,13 @@ static int __init emlog_init(void)
 
     ret_val = alloc_chrdev_region(&emlog_dev_type, EMLOG_MINOR_BASE, EMLOG_MINOR_COUNT, DEVICE_NAME);
     if (ret_val < 0) {
-        printk(KERN_ERR "%s: Can not alloc_chrdev_region, error code %d.\n", DEVICE_NAME, ret_val);
+        pr_err("Can not alloc_chrdev_region, error code %d.\n", ret_val);
         return -1;
     }
 
     emlog_cdev = cdev_alloc();
     if (emlog_cdev == NULL) {
-        printk(KERN_ERR "%s: Can not cdev_alloc.\n", DEVICE_NAME);
+        pr_err("Can not cdev_alloc.\n");
         ret_val = -2; goto emlog_init_error;
     }
 
@@ -424,21 +443,21 @@ static int __init emlog_init(void)
 
     ret_val = cdev_add(emlog_cdev, emlog_dev_type, EMLOG_MINOR_COUNT);
     if (ret_val < 0) {
-        printk(KERN_ERR "%s: Can not cdev_add, error code %d.\n", DEVICE_NAME, ret_val);
+        pr_err("Can not cdev_add, error code %d.\n", ret_val);
         ret_val = -3; goto emlog_init_error;
     }
 
-    printk(KERN_INFO "%s: version %s running, major is %d, MINOR is %d.\n", DEVICE_NAME, EMLOG_VERSION, MAJOR(emlog_dev_type), MINOR(emlog_dev_type));
+    pr_info("version %s running, major is %u, MINOR is %u.\n", EMLOG_VERSION, (unsigned)MAJOR(emlog_dev_type), (unsigned)MINOR(emlog_dev_type));
 
     emlog_class = class_create(THIS_MODULE, DEVICE_NAME);
     if (emlog_class == NULL) {
-        printk(KERN_ERR "%s: Can not class_create.\n", DEVICE_NAME);
+        pr_err("Can not class_create.\n");
         ret_val = -4; goto emlog_init_error;
     }
 
     emlog_dev_reg = device_create(emlog_class, NULL, emlog_dev_type, NULL, DEVICE_NAME);
     if (emlog_dev_reg == NULL) {
-        printk(KERN_ERR "%s: Can not device_create.\n", DEVICE_NAME);
+        pr_err("Can not device_create.\n");
         ret_val = -5; goto emlog_init_error;
     }
 
@@ -463,7 +482,7 @@ static void __exit emlog_remove(void)
     cdev_del(emlog_cdev);
     unregister_chrdev_region(emlog_dev_type, EMLOG_MINOR_COUNT);
 
-    printk(KERN_INFO "%s: unloaded.\n", DEVICE_NAME);
+    pr_info("unloaded.\n");
 }
 
 module_init(emlog_init);
