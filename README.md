@@ -1,10 +1,12 @@
-
 emlog -- the EMbedded-system LOG-device
+=======================================
 
-Version 0.40, 13 August 2001
+Version 0.52, 04 September 2012
 
 Author:   Jeremy Elson <jelson@circlemud.org>
-Web page: http://www.circlemud.org/~jelson/software/emlog
+Web page:
+* http://www.circlemud.org/~jelson/software/emlog
+* https://github.com/nicupavel/emlog
 
 --------------------------------------------------------------------------
 
@@ -31,77 +33,111 @@ to get the current contents of the log without blocking to wait for
 new data.)
 
 The current version of emlog should work under just about any Linux
-kernel in the 2.x series, including 2.4.
+kernel in the 2.6.x and 3.x series.
 
 emlog is free software, distributed under the GNU General Public
-License (GPL); see the file COPYING (in the distribution) for details.
+License (GPL) version 2; see the file COPYING (in the distribution) for
+details.
 
 
 How is emlog used?
 ==================
 
-1: Configure, compile, and install emlog
+### 1: Configure, compile, and install emlog
 
-   First, decide which major number you would like to use for emlog.
-   This is configured in emlog.h using the constant
-   EMLOG_MAJOR_NUMBER.  The default is 241, which is in the
-   "local/experimental use" range according to the kernel
-   documentation (similar to the 10/8 or 192.168/16 IP networks).
-   Setting the major number to 0 will cause the kernel to dynamically
-   assign a major number to emlog.
+   If you want to compile emlog for use with the currently running kernel,
+   simply run
+   ```bash
+   make
+   ```
 
-   Next, if your kernel source tree is not rooted in the default
-   directory of /usr/src/linux, modify the Makefile constant
-   KERNEL_HOME to reflect its actual location.
+   Otherwise, you have to set either KVER (for linux kernel sources,
+   located in `/lib/modules/<KVER>/build`) or KDIR (for any other path):
+   ```bash
+   make KDIR=/usr/src/linux
+   ```
 
-   After configuration, compile by typing 'make'.  Two files should be
-   generated: the kernel module itself (emlog.o), and the nbcat
-   utility that will be described later.
-
-   Finally, insert the module into the kernel using the 'insmod'
-   command; e.g. 'insmod emlog.o'.  If successful, a message similar
-   to "emlog: version 0.40 running, using major number 241" should
-   show up in your kernel log (type 'dmesg' or 'cat /proc/kmsg' to see
-   it).  You can also verify that the module has been inserted by
-   typing 'cat /proc/modules'.
+   Two files should be generated: the kernel module itself (`emlog.ko`),
+   and the `nbcat` utility that will be described later.
+   You can use them directly from the current directory or you can install them via
+   ```bash
+   make install
+   ```
 
 
-2: Create device files for emlog
+### 2: Load the emlog module into the kernel
 
-   Next, you must use 'mknod' to create device files that your
-   processes can write to.  The major number of the device files
-   should be whatever number you selected in Step 1 (e.g., 241).  The
-   minor number is used to indicate the *size* of the ring
+   If you chose to use emlog directly from the current directly, insert
+   the module into the kernel using the `insmod` command
+   ```bash
+   insmod emlog.ko
+   ```
+
+   Otherwise, `modprobe` should work:
+   ```bash
+   modprobe emlog
+   ```
+
+   If successful, a message similar to
+   ```
+   emlog:emlog_init: version 0.52 running, major is 251, MINOR is 1.
+   ```
+   should show up in your kernel log (type `dmesg` to see it).
+   You can also verify that the module has been inserted by
+   typing `lsmod` or `cat /proc/modules`.
+
+
+### 3: Create device files for emlog
+
+   By default, a device file `/dev/emlog` is created (if you have devtmpfs
+   mounted onto `/dev` and/or have udev running) with a minimal allocated buffer.
+   It's ready to be written to/read from.
+
+   If you need more devices/buffers, you should use `mknod` to create device
+   files that your processes can write to.
+   You need to know two numbers: the major and the minor.
+   You can find the major number by either of the following methods:
+   ```bash
+   ls -l /dev/emlog
+   grep emlog /proc/devices
+   (source /sys/class/emlog/emlog/uevent ; echo "$MAJOR")
+   dmesg | grep emlog
+   ```
+   The minor number is used to indicate the *size* of the ring
    buffer for that device file, specified as the the number of
    kilobytes (e.g., 1024 bytes).  For example, to create an 8K buffer
    called 'testlog':
-
-   % mknod /tmp/testlog c 241 8
+   ```bash
+   mknod /tmp/testlog c 251 8
+   ```
 
    You can create as many devices as you like.  Internally, emlog uses
    the file's inode and device numbers to identify the buffer to which
-   the file refers.
+   the file refers. Note, that internal buffer size is currently limited to 128K.
 
 
-3: Write to and read from your new device file
+### 4: Write to and read from your new device file
+
    Once the device file has been created, simply write to your device
    file as you would any normal named pipe, e.g.
-
-   % echo hello > /tmp/testlog
+   ```bash
+   echo hello > /tmp/testlog
+   ```
 
    Writes to the log will never block because the buffer never runs
    out of space; old data is simply overwritten by new data.
 
    You can read from the log in the normal way, e.g. using cat.  By
-   default, reads block, just like "tail -f", waiting for new log
+   default, reads block, just like `tail -f`, waiting for new log
    data.  For example:
-
-   % cat /tmp/testlog
+   ```bash
+   cat /tmp/testlog
    hello  [we immediately see the hello that we wrote in the previous step]
    _      [... and here's the cursor.  the 'cat' process is now
            blocked, waiting for new input.  New data will be displayed
            as it is written to the device by other processes.]
    ^C     [use control-c, for example, to stop reading.]
+   ```
 
    As of version 0.40, emlog's buffers can be read and/or monitored
    by multiple concurrent readers correctly.  Data written to an
@@ -111,11 +147,11 @@ How is emlog used?
    read.)
 
 
-4: Remove emlog when you're done
+### 5: Remove emlog when you're done
 
-   Type 'rmmod emlog' will remove the emlog kernel module and free all
-   associated buffers.  This won't work until all emlog device files
-   are closed.
+   Type `rmmod emlog` or `modprobe -r emlog` to remove the emlog kernel
+   module and free all associated buffers.  This won't work until all emlog
+   device files are closed.
 
 
 Other Usage Notes
@@ -124,8 +160,8 @@ Other Usage Notes
 * emlog will allocate a fixed-size buffer on behalf of a device file
 if one of the following two conditions is true:
 
-  1-  A process has the file open for reading or writing
-  2-  A process has written text to the pipe
+  1)  A process has the file open for reading or writing
+  2)  A process has written text to the pipe
 
 In other words, buffers are persistent, even after a process closes
 the emlog device.  Therefore, it is possible (naturally) to fill
@@ -138,54 +174,35 @@ will cause an EAGAIN to be returned if there is no data ready.  In
 addition, the select() and poll() functions will work correctly on
 emlog devices.
 
-* A small utility, 'nbcat', is included with the emlog distribution.
-nbcat is similar to 'cat', but uses nonblocking reads.
+* A small utility, `nbcat`, is included with the emlog distribution.
+nbcat is similar to `cat`, but uses nonblocking reads.
 This utility can be used to copy the current contents of an emlog
 device without blocking to wait for more input.  For example:
-
+   ```bash
    nbcat /var/log/emlog-device-instance > /tmp/saved-log-file
-
+   ```
 ...will copy the current contents of the named emlog device to a file
-in /tmp.
+in `/tmp`.
+Alternatively, you can use `dd` for that
+   ```bash
+   dd if=/var/log/emlog-device-instance of=/tmp/saved-log-file bs=4096 iflag=nonblock 2>/dev/null
+   ```
 
 
-Emlog and devfs
+Emlog and devtmpfs
 ===============
 
-I love devfs and use it extensively, but I don't think it makes much
-sense to use emlog with devfs.  emlog lets you create as many log
-devices as you like, anywhere on the filesystem -- the module tells
+By default, emlog creates only one device in `/dev/emlog` (or whereever
+your devtmpfs is mounted) with minimal buffer size.
+It doesn't make much sense to precreate devices with all possible buffer sizes.
+emlog lets you create as many log devices as you like,
+anywhere on the filesystem -- the module tells
 them apart based on their inode number.  Having a single log device
-always exist in a single place (/dev) is much less useful.  So, I have
-intentionally continued using the old register_chrdev interface
-instead of using the new devfs_register_chrdev interface.
+always exist in a single place (/dev) is much less useful.
 
- 
+
 Troubleshooting
 ===============
-
-Q:  When I try to compile emlog, I get hundreds of errors related
-to header files.
-
-A: If your kernel sources are rooted anywhere other than
-/usr/src/linux, make sure you change the KERNEL_HOME variable in the
-Makefile to reflect their location.  If you've recently installed new
-kernel sources, make sure that you've run "make config" or "make
-menuconfig" in the kernel's root (e.g. /usr/src/linux).  You don't
-actually have to go through the entire configuration; just make sure
-that you have a /usr/include/asm and a /usr/include/linux that are
-symbolic links into your kernel source tree.
-
-
-Q:  When I try to insert the module using 'insmod', I get 'I/O error'.
-
-A:  That usually means the major device number being registered by
-emlog is already in use by another device driver.  Type 'cat
-/proc/devices' to see a list of major device numbers that are in use.
-If there is a collision, edit emlog.h and change emlog's major device
-number to an unused number (or, change it to 0 in order to get a
-dynamically assigned major number).
-
 
 Q: I'm seeing "I/O error" at a time *other* then when the module is
 inserted.
@@ -199,7 +216,12 @@ I get the error "no such device".
 A:  This probably means either that the emlog kernel module is not
 loaded; or, that the major number of the device file does not match
 the major number that emlog registered.  To see which major number is
-being used by emlog, type 'cat /proc/devices | grep emlog'.
+being used by emlog, use any of the following methods:
+```bash
+grep emlog /proc/devices
+(source /sys/class/emlog/emlog/uevent ; echo "$MAJOR")
+dmesg | grep emlog
+```
 
 
 Q:  When I try to access an emlog device file for reading or writing,
@@ -208,7 +230,7 @@ I get the error "invalid argument".
 A:  The *minor* number of the emlog device file must be a number
 between 1 and 128, representing the number of kilobytes (1,024 bytes)
 that should be used for emlog's ring buffer.  Make sure you're
-specifying a valid minor number in your 'mknod' statement.  Don't use
+specifying a valid minor number in your `mknod` statement.  Don't use
 0.
 
 
@@ -217,23 +239,25 @@ Q:  I see "no memory" errors when I try opening new emlog files.
 A:  Looks like you're out of virtual memory, sport.
 
 
-Q:  When I try to remove the emlog driver ("rmmod emlog"), I get the
-error "Device or resource busy".
+Q:  When I try to remove the emlog driver (`rmmod emlog`), I get the
+error "Device or resource busy" or "rmmod: ERROR: Module emlog is in use".
 
 A:  That means a process is currently using an emlog device.  You have
 to wait until all processes close all emlog device files until the
-driver can be removed.  Try using "lsof" to see which files are in use
+driver can be removed.  Try using `lsof` to see which files are in use
 by which processes.
 
 
 Q:  I am trying to save a copy of the current emlog buffer to another
-file, by typing "cp /tmp/emlog-test /tmp/saved-log-copy", but cp just
+file, by typing `cp /tmp/emlog-test /tmp/saved-log-copy`, but cp just
 sits there forever.
 
-A:  cp is blocked waiting for more data, just like 'cat' does when
-used with an emlog device.  Use 'nbcat', the non-blocking cat utility
-included with the emlog distribution; for example: 
+A:  `cp` is blocked waiting for more data, just like `cat` does when
+used with an emlog device.  Use `nbcat`, the non-blocking cat utility
+included with the emlog distribution; for example:
+   ```bash
    nbcat /tmp/emlog-test > /tmp/saved-log-copy
+   ```
 
 
 Q:  You've made my computer crash.
@@ -246,9 +270,9 @@ Known Bugs
 
 None as of version 0.40.
 
+
 Bug reports, patches, complaints, praise, and submissions of Central
-Services Form 27B/6, are welcomed by the author (Jeremy Elson,
-<jelson@circlemud.org>.
+Services Form 27B/6, are welcomed at [Emlog github page](https://github.com/nicupavel/emlog).
 
 
 Version History
@@ -296,5 +320,3 @@ a debug console and see what went wrong.
 This work was supported by DARPA under grant No. DABT63-99-1-0011 as
 part of the SCADDS project, and was also made possible in part due to
 support from Cisco Systems.
-
-$Id: README,v 1.18 2001/08/13 23:22:35 jelson Exp $
