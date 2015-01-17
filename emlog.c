@@ -73,6 +73,7 @@
 #include "emlog.h"
 
 static struct emlog_info *emlog_info_list = NULL;
+static bool emlog_autofree;
 static bool emlog_debug;
 
 static dev_t emlog_dev_type = 0;
@@ -82,6 +83,7 @@ static struct cdev *emlog_cdev = NULL;
 static struct class *emlog_class = NULL;
 static struct device *emlog_dev_reg;
 
+module_param(emlog_autofree, int, 0644);
 module_param(emlog_debug, bool, 0644);
 
 /* find the emlog-info structure associated with an inode.  returns a
@@ -222,10 +224,11 @@ static int emlog_release(struct inode *inode, struct file *file)
     }
 
     /* decrement the reference count.  if no one has this file open and
-     * it's not holding any data, delete the record. */
+     * it's not holding any data or if autofree is set, delete the
+     * record. */
     einfo->refcount--;
 
-    if (einfo->refcount == 0 && EMLOG_QLEN(einfo) == 0)
+    if (einfo->refcount == 0 && (emlog_autofree || EMLOG_QLEN(einfo) == 0))
         free_einfo(einfo);
 
   out:
