@@ -292,8 +292,8 @@ static ssize_t emlog_read(struct file *file, char __user *buffer,      /* The bu
     struct emlog_info *einfo;
 
     /* get the metadata about this emlog */
-    if ((einfo = get_einfo(file->f_dentry->d_inode)) == NULL) {
-        pr_err("can not fetch einfo for inode %ld.\n", (long)(file->f_dentry->d_inode->i_ino));
+    if ((einfo = get_einfo(file->f_path.dentry->d_inode)) == NULL) {
+        pr_err("can not fetch einfo for inode %ld.\n", (long)(file->f_path.dentry->d_inode->i_ino));
         return -EIO;
     }
 
@@ -368,7 +368,7 @@ static ssize_t emlog_write(struct file *file,
     struct emlog_info *einfo;
 
     /* get the metadata about this emlog */
-    if ((einfo = get_einfo(file->f_dentry->d_inode)) == NULL)
+    if ((einfo = get_einfo(file->f_path.dentry->d_inode)) == NULL)
         return -EIO;
 
     /* if the message is longer than the buffer, just take the beginning
@@ -403,7 +403,7 @@ static unsigned int emlog_poll(struct file *file, struct poll_table_struct * wai
     struct emlog_info *einfo;
 
     /* get the metadata about this emlog */
-    if ((einfo = get_einfo(file->f_dentry->d_inode)) == NULL)
+    if ((einfo = get_einfo(file->f_path.dentry->d_inode)) == NULL)
         return -EIO;
 
     poll_wait(file, EMLOG_READQ(einfo), wait);
