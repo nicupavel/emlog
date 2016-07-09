@@ -83,7 +83,7 @@ static struct cdev *emlog_cdev = NULL;
 static struct class *emlog_class = NULL;
 static struct device *emlog_dev_reg;
 
-module_param(emlog_autofree, int, 0644);
+module_param(emlog_autofree, bool, 0644);
 module_param(emlog_debug, bool, 0644);
 
 /* find the emlog-info structure associated with an inode.  returns a
