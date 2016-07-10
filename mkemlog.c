@@ -11,7 +11,6 @@
  *
  */
 
-#define _BSD_SOURCE
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -22,7 +21,7 @@
 #include <errno.h>
 
 #define EMLOG_DEVICE "/dev/emlog"
-#define USAGE "usage: mkemlog <filename> [size] [mode]"
+#define USAGE "usage: mkemlog <logdevname> [size_in_kilobytes] [mode]"
 
 int main(int argc, char** argv) {
     int rc;
@@ -72,5 +71,6 @@ int main(int argc, char** argv) {
     if (rc == -1) {
         error(1, errno, "mknod: %s", file);
     }
+    printf("Log device %s created with buffer size of %d KiB\n", file, size_of_buffer);
     return 0;
 }
