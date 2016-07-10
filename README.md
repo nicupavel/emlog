@@ -93,7 +93,35 @@ How is emlog used?
    mounted onto `/dev` and/or have udev running) with a minimal allocated buffer.
    It's ready to be written to/read from.
 
-   If you need more devices/buffers, you should use `mknod` to create device
+   If you need more devices/buffers, you should can use the `mkemlog` program
+   to create device files that your processes can write to.
+
+   Usage `mkemlog <logdevname> [size_in_kilobytes] [mode]`
+
+#### 3.1: Examples usage mkemlog
+
+   Create a log file with a 8k buffer with file permissions 0660
+
+   ```bash
+   mkemlog /tmp/testlog
+   ```
+
+   Create a log file with a 17k buffer with file permissions 0660
+
+   ```bash
+   mkemlog /tmp/testlog 17
+   ```
+
+   Create a log file with a 12k buffer with file permissions 0644
+   ```bash
+   mkemlog /tmp/testlog_12k 12 0644
+   ```
+   The mkemlog requires the `/dev/emlog` file to be created.
+
+#### 3.2: Manually Creating emlogs
+
+   If you do not have devtmpfs mounted onto `/dev` and/or have udev running,
+   Then you can manually create emlogs using `mknod` to create device
    files that your processes can write to.
    You need to know two numbers: the major and the minor.
    You can find the major number by either of the following methods:

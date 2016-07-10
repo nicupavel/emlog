@@ -14,11 +14,11 @@ MDIR := emlog
 CFLAGS ?= -Wall -O2
 BINDIR ?= $(DESTDIR)/usr/bin
 
-all: modules nbcat
+all: modules nbcat mkemlog
 
-install: modules_install nbcat_install
+install: modules_install nbcat_install mkemlog_install
 
-clean: modules_clean nbcat_clean
+clean: modules_clean nbcat_clean mkemlog_clean
 
 modules:
 	$(MAKE) -C $(KDIR) M=$(CURDIR) modules
@@ -33,9 +33,19 @@ modules_clean:
 nbcat: nbcat.c
 	$(CC) -o $@ $^ $(CFLAGS) $(LDFLAGS)
 
+mkemlog: mkemlog.c
+	$(CC) -o $@ $^ $(CFLAGS) $(LDFLAGS)
+
 nbcat_install: nbcat
 	install -m 0755 -d '$(BINDIR)'
 	install -m 0755 -s -t '$(BINDIR)' nbcat
 
+mkemlog_install: mkemlog
+	install -m 0755 -d '$(BINDIR)'
+	install -m 0755 -s -t '$(BINDIR)' mkemlog
+
 nbcat_clean:
 	rm -f nbcat
+
+mkemlog_clean:
+	rm -f mkemlog
