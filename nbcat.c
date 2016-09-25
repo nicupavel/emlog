@@ -17,6 +17,11 @@
  * August 11, 2001
  *
  * $Id: nbcat.c,v 1.2 2001/08/13 21:29:56 jelson Exp $
+ *
+ * Modified By:
+ * Andreas Neustifter <andreas.neustifter at gmail.com>
+ * Nicu Pavel <npavel at mini-box.com>
+ *
  */
 
 #include <stdio.h>

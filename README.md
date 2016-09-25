@@ -1,9 +1,9 @@
 emlog -- the EMbedded-system LOG-device
 =======================================
 
-Version 0.52, 04 September 2012
+Version 0.60, 25 September 2016
 
-Author:   Jeremy Elson <jelson@circlemud.org>
+Author:   Jeremy Elson <jelson@circlemud.org><br/>
 Web page:
 * http://www.circlemud.org/~jelson/software/emlog
 * https://github.com/nicupavel/emlog
@@ -33,7 +33,8 @@ to get the current contents of the log without blocking to wait for
 new data.)
 
 The current version of emlog should work under just about any Linux
-kernel in the 2.6.x and 3.x series.
+kernel in the 2.6.x (at least 2.6.32 and newer), 3.x, and
+4.x series (at least up to 4.8-rc7).
 
 emlog is free software, distributed under the GNU General Public
 License (GPL) version 2; see the file COPYING (in the distribution) for
@@ -80,7 +81,7 @@ How is emlog used?
 
    If successful, a message similar to
    ```
-   emlog:emlog_init: version 0.52 running, major is 251, MINOR is 1.
+   emlog:emlog_init: version 0.60 running, major is 251, MINOR is 1.
    ```
    should show up in your kernel log (type `dmesg` to see it).
    You can also verify that the module has been inserted by
@@ -188,8 +189,8 @@ Other Usage Notes
 * emlog will allocate a fixed-size buffer on behalf of a device file
 if one of the following two conditions is true:
 
-  1)  A process has the file open for reading or writing
-  2)  A process has written text to the pipe
+  1.  A process has the file open for reading or writing
+  2.  A process has written text to the pipe
 
 In other words, buffers are persistent, even after a process closes
 the emlog device.  Therefore, it is possible (naturally) to fill
@@ -218,7 +219,7 @@ Alternatively, you can use `dd` for that
 
 
 Emlog and devtmpfs
-===============
+==================
 
 By default, emlog creates only one device in `/dev/emlog` (or whereever
 your devtmpfs is mounted) with minimal buffer size.
@@ -296,7 +297,7 @@ A:  Sorry.  If you can reproduce the problem I'll try to fix it.
 Known Bugs
 ==========
 
-None as of version 0.40.
+None as of version 0.60.
 
 
 Bug reports, patches, complaints, praise, and submissions of Central
@@ -305,8 +306,49 @@ Services Form 27B/6, are welcomed at [Emlog github page](https://github.com/nicu
 
 Version History
 ===============
+### Version 0.60 (September 25, 2016)
+ - Added mkemlog utility.
+ - Autofree module option (free associated buffer on last close).
+ - Create usable /dev/emlog by default (with non-zero sized buffer).
+ - Support for kernels >= 3.19.
+ - Dropped support for kernels < 2.6.20.
+ - Use pr_err() and friends instead of plain printk().
+ - Separate Kbuild file and makefile updates.
+ - Cleanup: types, static, etc.
+ - README conversion to Markdown syntax.
 
-Version 0.40 (August 13, 2001)
+### Version 0.52 (September 4, 2012)
+ - Switched to char device region instead of a misc device.
+ - Support for both 2.6.x and 3.x kernels.
+ - Proper log-levels for printk().
+ - Reindented source code (converted tabs to spaces).
+
+#### Changes by Andreas Neustifter <andreas.neustifter at gmail.com> (September 2, 2012)
+ - stability fixes
+ - module init and remove rewritten
+
+### Version 0.51 (August 31, 2011)
+ - Support for 3.0 kernel.
+ - Changed to misc device for auto-creation of /dev/emlog by udev
+
+#### Changes by Andriy Stepanov <stanv at altlinux.ru> (August 31, 2011)
+ - fix build on 3.0.3 kernel
+ - auto register /dev/emlog by udev
+
+### Version 0.50 (year 2006?)
+ - Updated to compile and work with 2.6.x kernels.
+
+#### Changes by Nicu Pavel <npavel at mini-box.com> (August 14, 2006)
+ - replaced MODULE_PARM macro with module_param function
+
+#### Changes by Nicu Pavel <npavelat mini-box.com> (June 12, 2006)
+ - 2.6 kernel functions update from Darien version.
+ - 2.6 Kernel Makefile
+
+#### Changes by Darien Kindlund <kindlund at mitre.org>
+ - Modified the emlog code to make it compatible with Linux 2.6 kernels.
+
+### Version 0.40 (August 13, 2001)
  - Concurrent readers and writers are now supported correctly (data is
    not consumed when it is first read, as it was in previous
    versions).
@@ -320,12 +362,12 @@ Version 0.40 (August 13, 2001)
    (unlikely) possibility that emlogs on different filesystems might
    share a single buffer.
 
-Version 0.30 (March 1, 2001)
+### Version 0.30 (March 1, 2001)
  - Now compiles correctly for 2.4 series kernels.
  - select() and poll() now work correctly on emlog devices.
  - Bug fix: all instances should not share one wait queue!
 
-Version 0.20 (June 14, 2000)
+### Version 0.20 (June 14, 2000)
  - Initial public release.
 
 

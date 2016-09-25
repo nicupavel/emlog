@@ -7,14 +7,18 @@
  *
  * Modified By:
  * Andreas Neustifter <andreas.neustifter at gmail.com>
+ * Andrey Mazo <ahippo at yandex.com>
  * Andriy Stepanov <stanv at altlinux.ru>
- * Nicu Pavel <npavel at mini-box.com>
  * Darien Kindlund <kindlund at mitre.org>
+ * Nicu Pavel <npavel at mini-box.com>
+ * Simon Boulet <simon at nostalgeek.com>
+ * Thomas Petazzoni <thomas.petazzoni at free-electrons.com>
  *
  * This code is released under the GPL
  *
- * This is emlog version 0.41, released 13 August 2001, modified 25 July 2006
+ * This is emlog version 0.60, released 13 August 2001, modified 25 September 2016
  * For more information see http://www.circlemud.org/~jelson/software/emlog
+ * and https://github.com/nicupavel/emlog
  *
  * $Id: emlog.c,v 1.7 2001/08/13 21:29:20 jelson Exp $
  */
