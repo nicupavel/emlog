@@ -82,7 +82,7 @@ static bool emlog_debug;
 
 static dev_t emlog_dev_type = 0;
 #define EMLOG_MINOR_BASE    1
-#define EMLOG_MINOR_COUNT   127 /* keep in sync with EMLOG_MAX_SIZE */
+#define EMLOG_MINOR_COUNT   (EMLOG_MAX_SIZE - 1)
 static struct cdev *emlog_cdev = NULL;
 static struct class *emlog_class = NULL;
 static struct device *emlog_dev_reg;
@@ -461,7 +461,7 @@ static int __init emlog_init(void)
         ret_val = -4; goto emlog_init_error;
     }
 
-    emlog_dev_reg = device_create(emlog_class, NULL, emlog_dev_type, NULL, DEVICE_NAME);
+    emlog_dev_reg = device_create(emlog_class, NULL, MKDEV(MAJOR(emlog_dev_type), 256), NULL, DEVICE_NAME, 256);
     if (emlog_dev_reg == NULL) {
         pr_err("Can not device_create.\n");
         ret_val = -5; goto emlog_init_error;

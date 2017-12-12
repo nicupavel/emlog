@@ -45,8 +45,8 @@ int main(int argc, char** argv) {
         if (end_of_number == number) {
             error(1, 0, "Invalid size provided\n" USAGE);
         }
-        if (size_of_buffer < 1 || size_of_buffer > 128 ) {
-            error(1, 0, "Invalid size provided must be a value between 1 and 128\n" USAGE);
+        if (size_of_buffer < 1 || size_of_buffer > EMLOG_MAX_SIZE ) {
+            error(1, 0, "Invalid size provided must be a value between 1 and " EMLOG_MAX_SIZE "\n" USAGE);
         }
     }
     if (argc > 3 ) {
