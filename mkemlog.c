@@ -21,6 +21,8 @@
 #include <errno.h>
 
 #define EMLOG_DEVICE "/dev/emlog"
+#define EMLOG_MAX_SIZE       1024        /* max size in kilobytes of a buffer */
+
 #define USAGE "usage: mkemlog <logdevname> [size_in_kilobytes] [mode]"
 
 int main(int argc, char** argv) {
@@ -46,7 +48,7 @@ int main(int argc, char** argv) {
             error(1, 0, "Invalid size provided\n" USAGE);
         }
         if (size_of_buffer < 1 || size_of_buffer > EMLOG_MAX_SIZE ) {
-            error(1, 0, "Invalid size provided must be a value between 1 and " EMLOG_MAX_SIZE "\n" USAGE);
+            error(1, 0, "Invalid size provided must be a value between 1 and %d\n" USAGE, EMLOG_MAX_SIZE);
         }
     }
     if (argc > 3 ) {
