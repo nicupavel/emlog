@@ -465,7 +465,7 @@ static int __init emlog_init(void)
         ret_val = -4; goto emlog_init_error;
     }
 
-    emlog_dev_reg = device_create(emlog_class, NULL, MKDEV(MAJOR(emlog_dev_type), 256), NULL, DEVICE_NAME, 256);
+    emlog_dev_reg = device_create(emlog_class, NULL, MKDEV(MAJOR(emlog_dev_type), 256), NULL, DEVICE_NAME );
     if (emlog_dev_reg == NULL) {
         pr_err("Can not device_create.\n");
         ret_val = -5; goto emlog_init_error;
