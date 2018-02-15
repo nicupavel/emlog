@@ -43,7 +43,6 @@
 #include <linux/module.h>
 #include <linux/cdev.h>
 #include <linux/device.h>
-#include <linux/sched.h>
 #include <linux/workqueue.h>
 #include <linux/wait.h>
 #include <linux/delay.h>
@@ -53,6 +52,11 @@
 #include <linux/types.h>
 #include <linux/fs.h>
 #include <linux/poll.h>
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 11, 0)
+#include <linux/sched.h>
+#else
+#include <linux/sched/signal.h>
+#endif
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 18)
 #include <asm/uaccess.h>
