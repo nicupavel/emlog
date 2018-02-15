@@ -86,7 +86,7 @@ static bool emlog_debug;
 
 static dev_t emlog_dev_type = 0;
 #define EMLOG_MINOR_BASE    1
-#define EMLOG_MINOR_COUNT   (EMLOG_MAX_SIZE - 1)
+#define EMLOG_MINOR_COUNT   EMLOG_MAX_SIZE
 static struct cdev *emlog_cdev = NULL;
 static struct class *emlog_class = NULL;
 static struct device *emlog_dev_reg;
