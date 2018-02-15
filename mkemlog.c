@@ -23,7 +23,7 @@
 #define EMLOG_DEVICE "/dev/emlog"
 #define EMLOG_MAX_SIZE       1024        /* max size in kilobytes of a buffer */
 
-#define USAGE "usage: mkemlog <logdevname> [size_in_kilobytes] [mode]"
+#define USAGE "usage: mkemlog <logdevname> [size_in_kilobytes] [mode] [uid]"
 
 int main(int argc, char** argv) {
     int rc;
@@ -33,7 +33,8 @@ int main(int argc, char** argv) {
     char* file;
     char* number;
     char* end_of_number;
-    if (argc < 2 || argc > 4) {
+    uid_t uid = -1;
+    if (argc < 2 || argc > 5) {
         error(1 ,0, USAGE);
     }
     file = argv[1];
@@ -62,6 +63,17 @@ int main(int argc, char** argv) {
             error(1, 0, "Invalid mode provided\n" USAGE);
         }
     }
+    if (argc > 4 ) {
+        errno = 0;
+        number = argv[4];
+        uid = strtol(number, &end_of_number, 10);
+        if (errno) {
+            error(1, errno, "Invalid uid provided\n" USAGE);
+        }
+        if (end_of_number == number) {
+            error(1, 0, "Invalid uid provided\n" USAGE);
+        }
+    }
     rc = stat(EMLOG_DEVICE, &emlog_stat);
     if (rc == -1) {
         error(1, errno, "stat: " EMLOG_DEVICE);
@@ -72,6 +84,12 @@ int main(int argc, char** argv) {
     rc = mknod(file, mode | S_IFCHR, makedev(major(emlog_stat.st_rdev),size_of_buffer));
     if (rc == -1) {
         error(1, errno, "mknod: %s", file);
+    }
+    if (uid != -1) {
+        rc = chown(file, uid, -1);
+        if (rc == -1) {
+            error(1, errno, "chown: %s", file);
+        }
     }
     printf("Log device %s created with buffer size of %d KiB\n", file, size_of_buffer);
     return 0;
