@@ -43,7 +43,6 @@
 #include <linux/module.h>
 #include <linux/cdev.h>
 #include <linux/device.h>
-#include <linux/sched.h>
 #include <linux/workqueue.h>
 #include <linux/wait.h>
 #include <linux/delay.h>
@@ -53,6 +52,11 @@
 #include <linux/types.h>
 #include <linux/fs.h>
 #include <linux/poll.h>
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 11, 0)
+#include <linux/sched.h>
+#else
+#include <linux/sched/signal.h>
+#endif
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 18)
 #include <asm/uaccess.h>
@@ -82,7 +86,7 @@ static bool emlog_debug;
 
 static dev_t emlog_dev_type = 0;
 #define EMLOG_MINOR_BASE    1
-#define EMLOG_MINOR_COUNT   (EMLOG_MAX_SIZE - 1)
+#define EMLOG_MINOR_COUNT   EMLOG_MAX_SIZE
 static struct cdev *emlog_cdev = NULL;
 static struct class *emlog_class = NULL;
 static struct device *emlog_dev_reg;
@@ -461,7 +465,7 @@ static int __init emlog_init(void)
         ret_val = -4; goto emlog_init_error;
     }
 
-    emlog_dev_reg = device_create(emlog_class, NULL, MKDEV(MAJOR(emlog_dev_type), 256), NULL, DEVICE_NAME, 256);
+    emlog_dev_reg = device_create(emlog_class, NULL, MKDEV(MAJOR(emlog_dev_type), 256), NULL, DEVICE_NAME );
     if (emlog_dev_reg == NULL) {
         pr_err("Can not device_create.\n");
         ret_val = -5; goto emlog_init_error;
