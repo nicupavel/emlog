@@ -39,7 +39,7 @@ struct emlog_info {
     size_t write_point;         /* Offset in circ. buffer of newest data */
     loff_t offset;              /* Byte number of read_point in the stream */
     struct emlog_info *next;
-    rwlock_t rwlock;            /* per e-info rwlock */
+    rwlock_t rwlock;            /* Per e-info rwlock. This is to protect against concurrent readers/writers */
 };
 
 /* amount of data in the queue */
