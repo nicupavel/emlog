@@ -21,7 +21,6 @@
 #include <errno.h>
 
 #define EMLOG_DEVICE "/dev/emlog"
-#define EMLOG_MAX_SIZE       1024        /* max size in kilobytes of a buffer */
 
 #define USAGE "usage: mkemlog <logdevname> [size_in_kilobytes] [mode] [uid]"
 
@@ -33,11 +32,20 @@ int main(int argc, char** argv) {
     char* file;
     char* number;
     char* end_of_number;
+    int emlog_max_size;
     uid_t uid = -1;
     if (argc < 2 || argc > 5) {
         error(1 ,0, USAGE);
     }
     file = argv[1];
+
+    FILE *max_size_file = NULL;
+    max_size_file = fopen("/sys/module/emlog/parameters/emlog_max_size", "r");
+    if (errno)
+        error(1, errno, "Emlog module not loaded\n");
+    fscanf(max_size_file, "%d", &emlog_max_size);
+    if (errno)
+        error(1, errno, "Unable to get emlog max size\n");
     if (argc > 2 ) {
         errno = 0;
         number = argv[2];
@@ -48,8 +56,8 @@ int main(int argc, char** argv) {
         if (end_of_number == number) {
             error(1, 0, "Invalid size provided\n" USAGE);
         }
-        if (size_of_buffer < 1 || size_of_buffer > EMLOG_MAX_SIZE ) {
-            error(1, 0, "Invalid size provided must be a value between 1 and %d\n" USAGE, EMLOG_MAX_SIZE);
+        if (size_of_buffer < 1 || size_of_buffer > emlog_max_size) {
+            error(1, 0, "Invalid size provided must be a value between 1 and %d\n" USAGE, emlog_max_size);
         }
     }
     if (argc > 3 ) {
@@ -94,3 +102,5 @@ int main(int argc, char** argv) {
     printf("Log device %s created with buffer size of %d KiB\n", file, size_of_buffer);
     return 0;
 }
+
+

@@ -84,16 +84,20 @@
 static struct emlog_info *emlog_info_list = NULL;
 static bool emlog_autofree;
 static bool emlog_debug;
-
+static int emlog_max_size = 1024;
 static dev_t emlog_dev_type = 0;
-#define EMLOG_MINOR_BASE    1
-#define EMLOG_MINOR_COUNT   EMLOG_MAX_SIZE
+
 static struct cdev *emlog_cdev = NULL;
 static struct class *emlog_class = NULL;
 static struct device *emlog_dev_reg;
 
 module_param(emlog_autofree, bool, 0644);
 module_param(emlog_debug, bool, 0644);
+module_param(emlog_max_size, int, 0644);
+
+#define EMLOG_MINOR_BASE    1
+#define EMLOG_MINOR_COUNT   emlog_max_size
+
 
 /* find the emlog-info structure associated with an inode.  returns a
  * pointer to the structure if found, NULL if not found */
@@ -120,7 +124,7 @@ static int create_einfo(const struct inode *inode, int minor,
     struct emlog_info *einfo;
 
     /* make sure the memory requirement is legal */
-    if (minor < 1 || minor > EMLOG_MAX_SIZE)
+    if (minor < 1 || minor > emlog_max_size)
         return -EINVAL;
 
     /* allocate space for our metadata and initialize it */
@@ -280,7 +284,7 @@ static char * read_from_emlog(struct emlog_info * einfo, size_t * length,
     remaining = *length;
     if (emlog_debug)
         pr_debug("Remaining: %zu\n", remaining);
-    
+
     /* figure out where to start based on user's offset */
     start_point = einfo->read_point + (*offset - einfo->offset);
     if (emlog_debug)
@@ -288,7 +292,7 @@ static char * read_from_emlog(struct emlog_info * einfo, size_t * length,
     start_point = start_point % einfo->size;
     if (emlog_debug)
         pr_debug("Start point: %d\n", start_point);
-    
+
     /* allocate memory to return */
     if ((retval = kmalloc(sizeof(char) * remaining, GFP_KERNEL)) == NULL) {
         read_unlock(&einfo->rwlock);
