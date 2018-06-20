@@ -269,8 +269,10 @@ static char * read_from_emlog(struct emlog_info * einfo, size_t * length,
     if (emlog_debug)
         pr_debug("New Offset: %lld\n", *offset);
     /* is the user trying to read past EOF? */
-    if (*offset >= EMLOG_FIRST_EMPTY_BYTE(einfo))
+    if (*offset >= EMLOG_FIRST_EMPTY_BYTE(einfo)) {
+        read_unlock(&einfo->rwlock);
         return NULL;
+    }
 
     /* find the smaller of the total bytes we have available and what
      * the user is asking for */
@@ -278,6 +280,7 @@ static char * read_from_emlog(struct emlog_info * einfo, size_t * length,
     remaining = *length;
     if (emlog_debug)
         pr_debug("Remaining: %zu\n", remaining);
+    
     /* figure out where to start based on user's offset */
     start_point = einfo->read_point + (*offset - einfo->offset);
     if (emlog_debug)
@@ -285,9 +288,12 @@ static char * read_from_emlog(struct emlog_info * einfo, size_t * length,
     start_point = start_point % einfo->size;
     if (emlog_debug)
         pr_debug("Start point: %d\n", start_point);
+    
     /* allocate memory to return */
-    if ((retval = kmalloc(sizeof(char) * remaining, GFP_KERNEL)) == NULL)
+    if ((retval = kmalloc(sizeof(char) * remaining, GFP_KERNEL)) == NULL) {
+        read_unlock(&einfo->rwlock);
         return NULL;
+    }
 
     /* copy the (possibly noncontiguous) data to our buffer */
     while (remaining) {
