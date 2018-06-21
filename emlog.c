@@ -52,6 +52,7 @@
 #include <linux/types.h>
 #include <linux/fs.h>
 #include <linux/poll.h>
+#include <linux/spinlock.h>
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 11, 0)
 #include <linux/sched.h>
 #else
@@ -130,6 +131,7 @@ static int create_einfo(const struct inode *inode, int minor,
     einfo->i_rdev = inode->i_rdev;
 
     init_waitqueue_head(EMLOG_READQ(einfo));
+    rwlock_init(&einfo->rwlock);
 
     /* figure out how much of a buffer this should be and allocate the buffer */
     einfo->size = 1024 * minor;
@@ -256,26 +258,42 @@ static char * read_from_emlog(struct emlog_info * einfo, size_t * length,
     int bytes_copied = 0, n, start_point;
     size_t remaining;
 
+    read_lock(&einfo->rwlock);
+
+    if (emlog_debug)
+        pr_debug("\nLength: %zu\nOffset: %lld\neinfo->offset: %lld\nEMLOG_FIRST_EMPTY_BYTE: %lld\neinfo->read_point: %zu\neinfo->write_point: %zu\n", *length, *offset, einfo->offset, EMLOG_FIRST_EMPTY_BYTE(einfo), einfo->read_point, einfo->write_point);
+
     /* is the user trying to read data that has already scrolled off? */
     if (*offset < einfo->offset)
         *offset = einfo->offset;
-
+    if (emlog_debug)
+        pr_debug("New Offset: %lld\n", *offset);
     /* is the user trying to read past EOF? */
-    if (*offset >= EMLOG_FIRST_EMPTY_BYTE(einfo))
+    if (*offset >= EMLOG_FIRST_EMPTY_BYTE(einfo)) {
+        read_unlock(&einfo->rwlock);
         return NULL;
+    }
 
     /* find the smaller of the total bytes we have available and what
      * the user is asking for */
     *length = min_t(size_t, *length, EMLOG_FIRST_EMPTY_BYTE(einfo) - *offset);
     remaining = *length;
-
+    if (emlog_debug)
+        pr_debug("Remaining: %zu\n", remaining);
+    
     /* figure out where to start based on user's offset */
     start_point = einfo->read_point + (*offset - einfo->offset);
+    if (emlog_debug)
+        pr_debug("Start point: %d\n", start_point);
     start_point = start_point % einfo->size;
-
+    if (emlog_debug)
+        pr_debug("Start point: %d\n", start_point);
+    
     /* allocate memory to return */
-    if ((retval = kmalloc(sizeof(char) * remaining, GFP_KERNEL)) == NULL)
+    if ((retval = kmalloc(sizeof(char) * remaining, GFP_KERNEL)) == NULL) {
+        read_unlock(&einfo->rwlock);
         return NULL;
+    }
 
     /* copy the (possibly noncontiguous) data to our buffer */
     while (remaining) {
@@ -285,6 +303,7 @@ static char * read_from_emlog(struct emlog_info * einfo, size_t * length,
         remaining -= n;
         start_point = (start_point + n) % einfo->size;
     }
+    read_unlock(&einfo->rwlock);
 
     /* advance user's file pointer */
     *offset += *length;
@@ -299,6 +318,8 @@ static ssize_t emlog_read(struct file *file, char __user *buffer,      /* The bu
     char *data_to_return;
     struct emlog_info *einfo;
 
+    if (emlog_debug)
+        pr_debug("\nLength: %zu\nOffset: %lld\n", length, *offset);
     /* get the metadata about this emlog */
     if ((einfo = get_einfo(file->f_path.dentry->d_inode)) == NULL) {
         pr_err("can not fetch einfo for inode %ld.\n", (long)(file->f_path.dentry->d_inode->i_ino));
@@ -337,6 +358,11 @@ static void write_to_emlog(struct emlog_info *einfo, char *buf, size_t length)
     int overflow = 0;
     int n;
 
+    write_lock(&einfo->rwlock);
+
+    if (emlog_debug)
+        pr_debug("\nLength: %zu\nEMLOG_QLEN: %zu\neinfo->size: %zu\neinfo->offset: %lld\neinfo->read_point: %zu\neinfo->write_point: %zu\n", length, EMLOG_QLEN(einfo), einfo->size, einfo->offset, einfo->read_point, einfo->write_point);
+
     if (length + EMLOG_QLEN(einfo) >= (einfo->size - 1)) {
         overflow = 1;
 
@@ -365,6 +391,7 @@ static void write_to_emlog(struct emlog_info *einfo, char *buf, size_t length)
      * overwritten. */
     if (overflow)
         einfo->read_point = (einfo->write_point + 1) % einfo->size;
+    write_unlock(&einfo->rwlock);
 }
 
 static ssize_t emlog_write(struct file *file,
@@ -375,6 +402,9 @@ static ssize_t emlog_write(struct file *file,
     size_t n;
     struct emlog_info *einfo;
 
+    if (emlog_debug)
+        pr_debug("\nLength: %zu\nOffset: %lld\n", length, *offset);
+
     /* get the metadata about this emlog */
     if ((einfo = get_einfo(file->f_path.dentry->d_inode)) == NULL)
         return -EIO;
@@ -383,6 +413,7 @@ static ssize_t emlog_write(struct file *file,
      * of it, in hopes that the reader (if any) will have time to read
      * before we wrap around and obliterate it */
     n = min(length, einfo->size - 1);
+
 
     /* make sure we have the memory for it */
     if ((message = kmalloc(n, GFP_KERNEL)) == NULL)
@@ -499,4 +530,3 @@ module_init(emlog_init);
 module_exit(emlog_remove);
 
 MODULE_LICENSE("GPL v2");
-
