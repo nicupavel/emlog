@@ -6,8 +6,12 @@
  *
  * This code is freeware and may be distributed without restriction.
  *
- * James Rouzier <rouzier@gmail.com>
+ * James Rouzier <rouzier at gmail.com>
  * July 7, 2016
+ *
+ * Modified By:
+ * David White <udingmyride at gmail.com
+ * 25 June 2018
  *
  */
 

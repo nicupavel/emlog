@@ -10,13 +10,14 @@
  * Andrey Mazo <ahippo at yandex.com>
  * Andriy Stepanov <stanv at altlinux.ru>
  * Darien Kindlund <kindlund at mitre.org>
+ * David White <udingmyride at gmail.com>
  * Nicu Pavel <npavel at mini-box.com>
  * Simon Boulet <simon at nostalgeek.com>
  * Thomas Petazzoni <thomas.petazzoni at free-electrons.com>
  *
  * This code is released under the GPL
  *
- * This is emlog version 0.60, released 13 August 2001, modified 25 September 2016
+ * This is emlog version 0.70, released 13 August 2001, modified 25 June 2018
  * For more information see http://www.circlemud.org/~jelson/software/emlog
  * and https://github.com/nicupavel/emlog
  *
@@ -81,7 +82,6 @@
 
 #include "emlog.h"
 
-static struct emlog_info *emlog_info_list = NULL;
 static bool emlog_autofree;
 static bool emlog_debug;
 static int emlog_max_size = 1024;
@@ -90,6 +90,7 @@ static dev_t emlog_dev_type = 0;
 static struct cdev *emlog_cdev = NULL;
 static struct class *emlog_class = NULL;
 static struct device *emlog_dev_reg;
+static struct emlog_info *emlog_info_list = NULL;
 
 module_param(emlog_autofree, bool, 0644);
 module_param(emlog_debug, bool, 0644);
