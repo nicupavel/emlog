@@ -36,20 +36,22 @@ int main(int argc, char** argv) {
     char* file;
     char* number;
     char* end_of_number;
-    int emlog_max_size;
+    int emlog_max_size = 0;
+    FILE *max_size_file = NULL;
     uid_t uid = -1;
     if (argc < 2 || argc > 5) {
         error(1 ,0, USAGE);
     }
     file = argv[1];
 
-    FILE *max_size_file = NULL;
     max_size_file = fopen("/sys/module/emlog/parameters/emlog_max_size", "r");
-    if (errno)
+    if (max_size_file == NULL)
         error(1, errno, "Emlog module not loaded\n");
-    fscanf(max_size_file, "%d", &emlog_max_size);
-    if (errno)
+    rc = fscanf(max_size_file, "%d", &emlog_max_size);
+    if (rc != 1)
         error(1, errno, "Unable to get emlog max size\n");
+    fclose(max_size_file);
+    max_size_file = NULL;
     if (argc > 2 ) {
         errno = 0;
         number = argv[2];

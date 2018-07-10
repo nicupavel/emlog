@@ -97,8 +97,6 @@ module_param(emlog_debug, bool, 0644);
 module_param(emlog_max_size, int, 0644);
 
 #define EMLOG_MINOR_BASE    1
-#define EMLOG_MINOR_COUNT   emlog_max_size
-
 
 /* find the emlog-info structure associated with an inode.  returns a
  * pointer to the structure if found, NULL if not found */
@@ -472,7 +470,12 @@ static int __init emlog_init(void)
 {
     int ret_val;
 
-    ret_val = alloc_chrdev_region(&emlog_dev_type, EMLOG_MINOR_BASE, EMLOG_MINOR_COUNT, DEVICE_NAME);
+    /* Allocate a region of N=emlog_max_size devices.
+     * Minor numbers are used to determine the size of the per-device buffer,
+     * so allocate one minor number for every possible buffer size (which is <= emlog_max_size).
+     */
+    const int emlog_minor_count = emlog_max_size;
+    ret_val = alloc_chrdev_region(&emlog_dev_type, EMLOG_MINOR_BASE, emlog_minor_count, DEVICE_NAME);
     if (ret_val < 0) {
         pr_err("Can not alloc_chrdev_region, error code %d.\n", ret_val);
         return -1;
@@ -487,7 +490,7 @@ static int __init emlog_init(void)
     emlog_cdev->ops = &emlog_fops;
     emlog_cdev->owner = THIS_MODULE;
 
-    ret_val = cdev_add(emlog_cdev, emlog_dev_type, EMLOG_MINOR_COUNT);
+    ret_val = cdev_add(emlog_cdev, emlog_dev_type, emlog_minor_count);
     if (ret_val < 0) {
         pr_err("Can not cdev_add, error code %d.\n", ret_val);
         ret_val = -3; goto emlog_init_error;
@@ -512,7 +515,7 @@ static int __init emlog_init(void)
     if (emlog_dev_reg) device_destroy(emlog_class, emlog_dev_type);
     if (emlog_class) class_destroy(emlog_class);
     if (emlog_cdev) cdev_del(emlog_cdev);
-    if (emlog_dev_type) unregister_chrdev_region(emlog_dev_type, EMLOG_MINOR_COUNT);
+    if (emlog_dev_type) unregister_chrdev_region(emlog_dev_type, emlog_minor_count);
   emlog_init_okay:
     return ret_val;
 }
@@ -526,7 +529,7 @@ static void __exit emlog_remove(void)
     device_destroy(emlog_class, emlog_dev_type);
     class_destroy(emlog_class);
     cdev_del(emlog_cdev);
-    unregister_chrdev_region(emlog_dev_type, EMLOG_MINOR_COUNT);
+    unregister_chrdev_region(emlog_dev_type, emlog_max_size /* aka emlog_minor_count */);
 
     pr_info("unloaded.\n");
 }
