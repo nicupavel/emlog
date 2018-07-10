@@ -94,7 +94,9 @@ static struct emlog_info *emlog_info_list = NULL;
 
 module_param(emlog_autofree, bool, 0644);
 module_param(emlog_debug, bool, 0644);
-module_param(emlog_max_size, int, 0644);
+/* make read-only, so that
+ * the number of minor dev numbers to register/unregister doesn't change */
+module_param(emlog_max_size, int, 0444);
 
 #define EMLOG_MINOR_BASE    1
 
