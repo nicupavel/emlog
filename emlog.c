@@ -498,7 +498,7 @@ static int __init emlog_init(void)
         ret_val = -3; goto emlog_init_error;
     }
 
-    pr_info("version %s running, major is %u, MINOR is %u.\n", EMLOG_VERSION, (unsigned)MAJOR(emlog_dev_type), (unsigned)MINOR(emlog_dev_type));
+    pr_info("version %s running, major is %u, MINOR is %u, max size %d K.\n", EMLOG_VERSION, (unsigned)MAJOR(emlog_dev_type), (unsigned)MINOR(emlog_dev_type), emlog_max_size);
 
     emlog_class = class_create(THIS_MODULE, DEVICE_NAME);
     if (emlog_class == NULL) {
