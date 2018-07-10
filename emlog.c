@@ -10,13 +10,14 @@
  * Andrey Mazo <ahippo at yandex.com>
  * Andriy Stepanov <stanv at altlinux.ru>
  * Darien Kindlund <kindlund at mitre.org>
+ * David White <udingmyride at gmail.com>
  * Nicu Pavel <npavel at mini-box.com>
  * Simon Boulet <simon at nostalgeek.com>
  * Thomas Petazzoni <thomas.petazzoni at free-electrons.com>
  *
  * This code is released under the GPL
  *
- * This is emlog version 0.60, released 13 August 2001, modified 25 September 2016
+ * This is emlog version 0.70, released 13 August 2001, modified 25 June 2018
  * For more information see http://www.circlemud.org/~jelson/software/emlog
  * and https://github.com/nicupavel/emlog
  *
@@ -81,19 +82,23 @@
 
 #include "emlog.h"
 
-static struct emlog_info *emlog_info_list = NULL;
 static bool emlog_autofree;
 static bool emlog_debug;
-
+static int emlog_max_size = 1024;
 static dev_t emlog_dev_type = 0;
-#define EMLOG_MINOR_BASE    1
-#define EMLOG_MINOR_COUNT   EMLOG_MAX_SIZE
+
 static struct cdev *emlog_cdev = NULL;
 static struct class *emlog_class = NULL;
 static struct device *emlog_dev_reg;
+static struct emlog_info *emlog_info_list = NULL;
 
 module_param(emlog_autofree, bool, 0644);
 module_param(emlog_debug, bool, 0644);
+/* make read-only, so that
+ * the number of minor dev numbers to register/unregister doesn't change */
+module_param(emlog_max_size, int, 0444);
+
+#define EMLOG_MINOR_BASE    1
 
 /* find the emlog-info structure associated with an inode.  returns a
  * pointer to the structure if found, NULL if not found */
@@ -120,7 +125,7 @@ static int create_einfo(const struct inode *inode, int minor,
     struct emlog_info *einfo;
 
     /* make sure the memory requirement is legal */
-    if (minor < 1 || minor > EMLOG_MAX_SIZE)
+    if (minor < 1 || minor > emlog_max_size)
         return -EINVAL;
 
     /* allocate space for our metadata and initialize it */
@@ -280,7 +285,7 @@ static char * read_from_emlog(struct emlog_info * einfo, size_t * length,
     remaining = *length;
     if (emlog_debug)
         pr_debug("Remaining: %zu\n", remaining);
-    
+
     /* figure out where to start based on user's offset */
     start_point = einfo->read_point + (*offset - einfo->offset);
     if (emlog_debug)
@@ -288,7 +293,7 @@ static char * read_from_emlog(struct emlog_info * einfo, size_t * length,
     start_point = start_point % einfo->size;
     if (emlog_debug)
         pr_debug("Start point: %d\n", start_point);
-    
+
     /* allocate memory to return */
     if ((retval = kmalloc(sizeof(char) * remaining, GFP_KERNEL)) == NULL) {
         read_unlock(&einfo->rwlock);
@@ -467,7 +472,12 @@ static int __init emlog_init(void)
 {
     int ret_val;
 
-    ret_val = alloc_chrdev_region(&emlog_dev_type, EMLOG_MINOR_BASE, EMLOG_MINOR_COUNT, DEVICE_NAME);
+    /* Allocate a region of N=emlog_max_size devices.
+     * Minor numbers are used to determine the size of the per-device buffer,
+     * so allocate one minor number for every possible buffer size (which is <= emlog_max_size).
+     */
+    const int emlog_minor_count = emlog_max_size;
+    ret_val = alloc_chrdev_region(&emlog_dev_type, EMLOG_MINOR_BASE, emlog_minor_count, DEVICE_NAME);
     if (ret_val < 0) {
         pr_err("Can not alloc_chrdev_region, error code %d.\n", ret_val);
         return -1;
@@ -482,7 +492,7 @@ static int __init emlog_init(void)
     emlog_cdev->ops = &emlog_fops;
     emlog_cdev->owner = THIS_MODULE;
 
-    ret_val = cdev_add(emlog_cdev, emlog_dev_type, EMLOG_MINOR_COUNT);
+    ret_val = cdev_add(emlog_cdev, emlog_dev_type, emlog_minor_count);
     if (ret_val < 0) {
         pr_err("Can not cdev_add, error code %d.\n", ret_val);
         ret_val = -3; goto emlog_init_error;
@@ -507,7 +517,7 @@ static int __init emlog_init(void)
     if (emlog_dev_reg) device_destroy(emlog_class, emlog_dev_type);
     if (emlog_class) class_destroy(emlog_class);
     if (emlog_cdev) cdev_del(emlog_cdev);
-    if (emlog_dev_type) unregister_chrdev_region(emlog_dev_type, EMLOG_MINOR_COUNT);
+    if (emlog_dev_type) unregister_chrdev_region(emlog_dev_type, emlog_minor_count);
   emlog_init_okay:
     return ret_val;
 }
@@ -521,7 +531,7 @@ static void __exit emlog_remove(void)
     device_destroy(emlog_class, emlog_dev_type);
     class_destroy(emlog_class);
     cdev_del(emlog_cdev);
-    unregister_chrdev_region(emlog_dev_type, EMLOG_MINOR_COUNT);
+    unregister_chrdev_region(emlog_dev_type, emlog_max_size /* aka emlog_minor_count */);
 
     pr_info("unloaded.\n");
 }

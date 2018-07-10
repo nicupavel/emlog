@@ -10,18 +10,18 @@
  * Andrey Mazo <ahippo at yandex.com>
  * Andriy Stepanov <stanv at altlinux.ru>
  * Darien Kindlund <kindlund at mitre.org>
+ * David White <udingmyride at gmail.com>
  * Nicu Pavel <npavel at mini-box.com>
 
  * This code is released under the GPL
  *
- * This is emlog version 0.60, released 13 August 2001, modified 25 September 2016
+ * This is emlog version 0.70, released 13 August 2001, modified 25 June 2018
  * For more information see http://www.circlemud.org/~jelson/software/emlog
  * and https://github.com/nicupavel/emlog
  *
  * $Id: emlog.h,v 1.6 2001/08/13 21:29:20 jelson Exp $
  */
 
-#define EMLOG_MAX_SIZE       1024        /* max size in kilobytes of a buffer */
 #define DEVICE_NAME "emlog"
 
 #define EMLOG_VERSION        "0.60"
