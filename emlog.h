@@ -24,7 +24,7 @@
 
 #define DEVICE_NAME "emlog"
 
-#define EMLOG_VERSION        "0.60"
+#define EMLOG_VERSION        "0.70"
 
 /************************ Private Definitions *****************************/
 

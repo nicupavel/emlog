@@ -1,7 +1,7 @@
 emlog -- the EMbedded-system LOG-device
 =======================================
 
-Version 0.60, 25 September 2016
+Version 0.70, 10 July 2018
 
 Author:   Jeremy Elson <jelson@circlemud.org><br/>
 Web page:
@@ -34,7 +34,7 @@ new data.)
 
 The current version of emlog should work under just about any Linux
 kernel in the 2.6.x (at least 2.6.32 and newer), 3.x, and
-4.x series (at least up to 4.8-rc7).
+4.x series (at least up to 4.18-rc4).
 
 emlog is free software, distributed under the GNU General Public
 License (GPL) version 2; see the file COPYING (in the distribution) for
@@ -79,9 +79,14 @@ How is emlog used?
    modprobe emlog
    ```
 
+   To specify a different maximum buffer size limit:
+   ```bash
+   modprobe emlog emlog_max_size=2048
+   ```
+
    If successful, a message similar to
    ```
-   emlog:emlog_init: version 0.60 running, major is 251, MINOR is 1.
+   emlog:emlog_init: version 0.70 running, major is 251, MINOR is 1, max size 1024 K.
    ```
    should show up in your kernel log (type `dmesg` to see it).
    You can also verify that the module has been inserted by
@@ -117,6 +122,12 @@ How is emlog used?
    ```bash
    mkemlog /tmp/testlog_12k 12 0644
    ```
+
+   Create a log file with a 18k buffer with file permissions 0644, owned by a user with UID==1000.
+   ```bash
+   mkemlog /tmp/testlog_18k 18 0644 1000
+   ```
+
    The mkemlog requires the `/dev/emlog` file to be created.
 
 #### 3.2: Manually Creating emlogs
@@ -296,8 +307,10 @@ A:  Sorry.  If you can reproduce the problem I'll try to fix it.
 
 Known Bugs
 ==========
-
-None as of version 0.60.
+ * [Racy einfo allocation/destruction](https://github.com/nicupavel/emlog/issues/10).
+   This may cause memory leaks or crashes during concurrent opening of _new_ emlog buffers,
+   or concurrent closing/opening of an emlog device.
+   (when loaded with `emlog_autofree=1` (defaults to off))
 
 
 Bug reports, patches, complaints, praise, and submissions of Central
@@ -306,6 +319,15 @@ Services Form 27B/6, are welcomed at [Emlog github page](https://github.com/nicu
 
 Version History
 ===============
+### Version 0.70 (July 10, 2018)
+ - Change the default size of /dev/emlog from 1KB to 256KB.
+ - Allow emlog devices to be up to 1MB large.
+ - Fixes for recent kernel / glibc, fix mkemlog.
+ - Allow to specify ownership of the log device.
+ - Add support for per e-info rwlock and add more debug.
+   (fix nasty reader vs writer race condition)
+ - Allow dynamic sizing of emlog_max_size via module_param.
+
 ### Version 0.60 (September 25, 2016)
  - Added mkemlog utility.
  - Autofree module option (free associated buffer on last close).
