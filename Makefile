@@ -12,6 +12,8 @@ KDIR ?= /lib/modules/$(KVER)/build
 MDIR := emlog
 MVER := 0.70
 
+DKMS ?= dkms
+
 CFLAGS ?= -Wall -O2
 BINDIR ?= $(DESTDIR)/usr/bin
 
@@ -54,9 +56,9 @@ mkemlog_clean:
 	rm -f mkemlog
 
 dkms_install:
-	dkms add .
-	dkms install emlog/$(MVER)
+	$(DKMS) add .
+	$(DKMS) install emlog/$(MVER)
 
 dkms_remove:
-	dkms remove emlog/$(MVER) --all
+	$(DKMS) remove emlog/$(MVER) --all
 	#rm -rf /usr/src/emlog-$(MVER)
