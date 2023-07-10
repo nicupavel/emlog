@@ -500,7 +500,11 @@ static int __init emlog_init(void)
 
     pr_info("version %s running, major is %u, MINOR is %u, max size %d K.\n", EMLOG_VERSION, (unsigned)MAJOR(emlog_dev_type), (unsigned)MINOR(emlog_dev_type), emlog_max_size);
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 4, 0)
     emlog_class = class_create(THIS_MODULE, DEVICE_NAME);
+#else
+    emlog_class = class_create(DEVICE_NAME);
+#endif
     if (emlog_class == NULL) {
         pr_err("Can not class_create.\n");
         ret_val = -4; goto emlog_init_error;
