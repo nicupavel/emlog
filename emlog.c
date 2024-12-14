@@ -464,7 +464,12 @@ static const struct file_operations emlog_fops = {
     .open = emlog_open,
     .release = emlog_release,
     .poll = emlog_poll,
-    .llseek = no_llseek,        /* no_llseek by default introduced at v2.6.37-rc1 */
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 12, 0)
+    /* no_llseek by default introduced at v2.6.37-rc1 and
+     * removed in 6.12.0
+     */
+    .llseek = no_llseek,
+#endif
     .owner = THIS_MODULE,
 };
 
