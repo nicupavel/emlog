@@ -1,4 +1,3 @@
-
 /*
  * EMLOG: the EMbedded-device LOGger
  *
@@ -91,6 +90,7 @@ static struct cdev *emlog_cdev = NULL;
 static struct class *emlog_class = NULL;
 static struct device *emlog_dev_reg;
 static struct emlog_info *emlog_info_list = NULL;
+static spinlock_t emlog_info_list_lock; // P714a
 
 module_param(emlog_autofree, bool, 0644);
 module_param(emlog_debug, bool, 0644);
@@ -109,9 +109,13 @@ static struct emlog_info *get_einfo(const struct inode *inode)
     if (inode == NULL)
         return NULL;
 
+    spin_lock(&emlog_info_list_lock); // Peeba
     for (einfo = emlog_info_list; einfo != NULL; einfo = einfo->next)
-        if (einfo->i_ino == inode->i_ino && einfo->i_rdev == inode->i_rdev)
+        if (einfo->i_ino == inode->i_ino && einfo->i_rdev == inode->i_rdev) {
+            spin_unlock(&emlog_info_list_lock); // Peeba
             return einfo;
+        }
+    spin_unlock(&emlog_info_list_lock); // Peeba
 
     return NULL;
 }
@@ -144,8 +148,10 @@ static int create_einfo(const struct inode *inode, int minor,
         goto data_malloc_failed;
 
     /* add it to our linked list */
+    spin_lock(&emlog_info_list_lock); // P714a
     einfo->next = emlog_info_list;
     emlog_info_list = einfo;
+    spin_unlock(&emlog_info_list_lock); // P714a
 
     if (emlog_debug)
         pr_debug("allocating resources associated with inode %ld.\n", einfo->i_ino);
@@ -184,6 +190,7 @@ static void free_einfo(struct emlog_info *einfo)
     /* now delete the 'einfo' structure from the linked list.  'ptr' is
      * the pointer that needs to be changed... which is either the list
      * head or one of the 'next' pointers on the list. */
+    spin_lock(&emlog_info_list_lock); // P714a
     ptr = &emlog_info_list;
     while (*ptr != einfo) {
         if (!*ptr) {
@@ -194,6 +201,7 @@ static void free_einfo(struct emlog_info *einfo)
 
     }
     *ptr = einfo->next;
+    spin_unlock(&emlog_info_list_lock); // P714a
 
 }
 
@@ -515,6 +523,8 @@ static int __init emlog_init(void)
         pr_err("Can not device_create.\n");
         ret_val = -5; goto emlog_init_error;
     }
+
+    spin_lock_init(&emlog_info_list_lock); // P714a
 
     goto emlog_init_okay;
   emlog_init_error:
