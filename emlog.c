@@ -89,8 +89,9 @@ static dev_t emlog_dev_type = 0;
 static struct cdev *emlog_cdev = NULL;
 static struct class *emlog_class = NULL;
 static struct device *emlog_dev_reg;
-static struct emlog_info *emlog_info_list = NULL;
-static spinlock_t emlog_info_list_lock; // P714a
+
+static struct emlog_info *emlog_info_list = NULL;  // protected by emlog_info_list_lock
+static spinlock_t emlog_info_list_lock;
 
 module_param(emlog_autofree, bool, 0644);
 module_param(emlog_debug, bool, 0644);
